@@ -1,11 +1,18 @@
 "use client";
 
-import Link from "next/link";
-import { useLanguage } from "@/components/providers/language-provider";
-import type { DbNews } from "@/lib/supabase-queries";
 import Image from "next/image";
+import Link from "next/link";
+import { SiteHeader } from "@/components/site-header";
+import { useLanguage } from "@/components/providers/language-provider";
+import type { DbNews, DbPortfolio } from "@/lib/supabase-queries";
 
-export default function NewsDetailClient({ newsItem }: { newsItem: DbNews }) {
+export default function NewsDetailClient({ 
+  newsItem, 
+  embeddedPortfolio = [] 
+}: { 
+  newsItem: DbNews;
+  embeddedPortfolio?: DbPortfolio[];
+}) {
   const { language } = useLanguage();
 
   if (!newsItem) {
@@ -21,40 +28,57 @@ export default function NewsDetailClient({ newsItem }: { newsItem: DbNews }) {
     );
   }
 
+  const title = language === "ja" ? newsItem.title_ja || newsItem.title_en : newsItem.title_en;
+  const body = (language === "ja" ? newsItem.body_ja || newsItem.body_en : newsItem.body_en) || "";
+
+  // Helper to render body with embedded cards
+  const renderBody = (text: string) => {
+    if (!text) return null;
+    
+    const parts = text.split(/(\[portfolio:[a-f0-9-]+\])/g);
+    return parts.map((part, index) => {
+      const match = part.match(/\[portfolio:([a-f0-9-]+)\]/);
+      if (match) {
+        const id = match[1];
+        const item = embeddedPortfolio.find(p => p.id === id);
+        if (item) {
+          return (
+            <div key={index} className="my-8 border border-black/10 rounded-xl overflow-hidden bg-white shadow-sm max-w-sm mx-auto">
+              <Link href={`/portfolio/${item.id}`}>
+                <div className="aspect-square relative bg-black/5">
+                  {item.image_url && <img src={item.image_url} alt={item.title_en} className="w-full h-full object-cover" />}
+                </div>
+                <div className="p-4">
+                  <h4 className="font-bold text-sm">{item.title_en}</h4>
+                  <p className="text-xs text-blue-500 mt-2 font-bold">View Artwork →</p>
+                </div>
+              </Link>
+            </div>
+          );
+        }
+      }
+      return <span key={index} className="whitespace-pre-wrap">{part}</span>;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-white text-black">
-      <header className="bg-white border-b border-black/10">
-        <div className="container mx-auto px-4 py-4">
-          <Link href="/news" className="hover:underline">
-            ← Back to News
-          </Link>
-        </div>
-      </header>
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="mb-8">
-          <h2 className="text-4xl font-bold mb-2">
-            {language === "ja" ? newsItem.title_ja || newsItem.title_en : newsItem.title_en}
-          </h2>
-          <p className="text-gray-500">{newsItem.published_at}</p>
-        </div>
-        <div className="w-full bg-black/5 border border-black/10 rounded-lg aspect-video flex items-center justify-center text-7xl mb-8 relative overflow-hidden">
-          {newsItem.image_url ? (
-            <Image src={newsItem.image_url} alt="News thumbnail" fill className="object-cover" />
-          ) : (
-            <span>📰</span>
+      <SiteHeader />
+      <article className="max-w-3xl mx-auto px-4 py-12">
+        <header className="mb-8 border-b border-black/10 pb-8">
+          <p className="text-sm text-gray-500 mb-4">{newsItem.published_at.split("T")[0]}</p>
+          <h1 className="text-4xl md:text-5xl font-black mb-6 leading-tight">{title}</h1>
+          {newsItem.image_url && (
+            <div className="aspect-video relative rounded-2xl overflow-hidden bg-black/5 border border-black/10">
+              <img src={newsItem.image_url} alt={title} className="w-full h-full object-cover" />
+            </div>
           )}
+        </header>
+
+        <div className="prose prose-lg max-w-none text-black leading-relaxed">
+          {renderBody(body)}
         </div>
-        <div className="max-w-none">
-          {/* In a real app with JSONB, we'd render it here. For now just JSON.stringify or extract text */}
-          <div className="whitespace-pre-wrap">
-            {language === "ja" 
-              ? (typeof newsItem.body_ja === "string" ? newsItem.body_ja : JSON.stringify(newsItem.body_ja)) || 
-                (typeof newsItem.body_en === "string" ? newsItem.body_en : JSON.stringify(newsItem.body_en))
-              : (typeof newsItem.body_en === "string" ? newsItem.body_en : JSON.stringify(newsItem.body_en))
-            }
-          </div>
-        </div>
-      </main>
+      </article>
     </div>
   );
 }

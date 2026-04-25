@@ -122,6 +122,15 @@ export async function getPortfolioById(id: string) {
   return data as DbPortfolio;
 }
 
+export async function getPortfolioByIds(ids: string[]): Promise<DbPortfolio[]> {
+  const { data, error } = await supabase
+    .from("portfolio")
+    .select("*")
+    .in("id", ids);
+  if (error) throw error;
+  return data || [];
+}
+
 export async function createPortfolio(portfolio: Partial<DbPortfolio>) {
   const { data, error } = await supabase.from("portfolio").insert(portfolio).select().single();
   if (error) throw error;

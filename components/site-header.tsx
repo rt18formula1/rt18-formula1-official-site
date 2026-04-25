@@ -10,11 +10,11 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-black/10">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2">
-          <Image src="/rt18_formula1-icon.png" alt="rt18_formula1" width={170} height={48} className="h-12 w-auto" />
+        <Link href="/#top" className="flex items-center gap-2">
+          <img src="/logo.png" alt="rt18_formula1" className="h-10 w-auto" />
         </Link>
         <nav className="hidden lg:flex items-center gap-8 text-sm text-black">
-          <Link href="/" className="hover:underline">
+          <Link href="/#top" className="hover:underline">
             {t("navHome")}
           </Link>
           <a href="/#profile" className="hover:underline">

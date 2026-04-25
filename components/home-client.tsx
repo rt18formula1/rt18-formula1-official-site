@@ -7,7 +7,6 @@ import { SiteHeader } from "@/components/site-header";
 import { useLanguage } from "@/components/providers/language-provider";
 import { linktreeLinks, snsLinks } from "@/lib/content";
 import type { DbNews, DbPortfolio } from "@/lib/supabase-queries";
-import { format } from "date-fns";
 
 export default function HomeClient({ news, portfolio }: { news: DbNews[]; portfolio: DbPortfolio[] }) {
   const { language, t } = useLanguage();
@@ -29,7 +28,7 @@ export default function HomeClient({ news, portfolio }: { news: DbNews[]; portfo
     <div className="min-h-screen bg-white flex flex-col text-black">
       <SiteHeader />
       <main className="flex-1">
-        <section className="py-16 md:py-24 text-center bg-white">
+        <section id="top" className="py-16 md:py-24 text-center bg-white">
           <h1 className="text-5xl md:text-7xl font-black mb-6">rt18_formula1</h1>
           <p className="text-lg max-w-2xl mx-auto px-4 mb-8">{heroText}</p>
         </section>
