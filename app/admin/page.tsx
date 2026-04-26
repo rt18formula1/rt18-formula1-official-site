@@ -25,6 +25,12 @@ import {
   createEventAction,
   deleteEventAction,
 } from "@/lib/admin-actions";
+import {
+  updateNewsTitle,
+  updatePortfolioTitle,
+  updateNewsContent,
+  updatePortfolioContent,
+} from "@/lib/admin-edit-actions";
 
 import { AdminImageCard } from "@/components/admin-image-card";
 
@@ -38,10 +44,19 @@ export default function AdminPage() {
   const [albums, setAlbums] = useState<DbAlbum[]>([]);
   const [events, setEvents] = useState<DbEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Collapsible sections state
+  const [collapsedSections, setCollapsedSections] = useState({
+    portfolio: false,
+    news: false,
+    albums: false,
+    events: false
+  });
 
   // Album Modal State
-  const [activeModal, setActiveModal] = useState<"news" | "portfolio" | "album" | "event" | null>(null);
+  const [activeModal, setActiveModal] = useState<"news" | "portfolio" | "album" | "event" | "edit" | null>(null);
   const [albumType, setAlbumType] = useState<"backnumber" | "portfolio">("portfolio");
+  const [editItem, setEditItem] = useState<{ id: string; type: "news" | "portfolio"; title_en: string; title_ja: string; body_en?: string; body_ja?: string } | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -225,6 +240,29 @@ export default function AdminPage() {
     setLoading(false);
   };
 
+  const toggleSection = (section: keyof typeof collapsedSections) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const handleEdit = (item: { id: string; type: "news" | "portfolio"; title_en: string; title_ja: string; body_en?: string; body_ja?: string }) => {
+    setEditItem(item);
+    setFormData({
+      title: item.title_en,
+      content: item.body_en || "",
+      file: null,
+      previewUrl: "",
+      albumId: "",
+      parentId: "",
+      location: "",
+      startTime: "",
+      endTime: "",
+    });
+    setActiveModal("edit");
+  };
+
   if (!sessionOk) {
     return (
       <div className="min-h-screen bg-white text-black">
@@ -290,59 +328,81 @@ export default function AdminPage() {
         {/* Portfolio Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between border-b border-black/10 pb-4">
-            <h2 className="text-xl font-bold">Portfolio</h2>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => toggleSection("portfolio")}
+                className="w-6 h-6 flex items-center justify-center text-black hover:bg-black/5 rounded transition-colors"
+              >
+                <span className={`transform transition-transform ${collapsedSections.portfolio ? "rotate-90" : ""}`}>▶</span>
+              </button>
+              <h2 className="text-xl font-bold">Portfolio ({portfolio.length})</h2>
+            </div>
             <button onClick={() => { resetForm(); setAlbumType("portfolio"); setActiveModal("album"); }} className="text-sm font-bold underline">+ New Album</button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {portfolio.map((p) => (
-              <AdminImageCard
-                key={p.id}
-                id={p.id}
-                title={p.title_en}
-                imageUrl={p.image_url}
-                date={p.created_at}
-                type="portfolio"
-                onDelete={() => handleDeletePortfolio(p.id)}
-                onAssign={() => {
-                  const aid = prompt("Album ID?");
-                  if (aid) addPortfolioToAlbumAction(aid, p.id).then(() => alert("Assigned!"));
-                }}
-                onCopyEmbed={() => {
-                  navigator.clipboard.writeText(`[portfolio:${p.id}]`);
-                  alert("Copied to clipboard!");
-                }}
-              />
-            ))}
-          </div>
+          {!collapsedSections.portfolio && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {portfolio.map((p) => (
+                <AdminImageCard
+                  key={p.id}
+                  id={p.id}
+                  title={p.title_en}
+                  imageUrl={p.image_url}
+                  date={p.created_at}
+                  type="portfolio"
+                  onDelete={() => handleDeletePortfolio(p.id)}
+                  onAssign={() => {
+                    const aid = prompt("Album ID?");
+                    if (aid) addPortfolioToAlbumAction(aid, p.id).then(() => alert("Assigned!"));
+                  }}
+                  onCopyEmbed={() => {
+                    navigator.clipboard.writeText(`[portfolio:${p.id}]`);
+                    alert("Copied to clipboard!");
+                  }}
+                  onEdit={() => handleEdit({ id: p.id, type: "portfolio", title_en: p.title_en, title_ja: p.title_ja, body_en: p.body_en, body_ja: p.body_ja })}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* News Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between border-b border-black/10 pb-4">
-            <h2 className="text-xl font-bold">News</h2>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => toggleSection("news")}
+                className="w-6 h-6 flex items-center justify-center text-black hover:bg-black/5 rounded transition-colors"
+              >
+                <span className={`transform transition-transform ${collapsedSections.news ? "rotate-90" : ""}`}>▶</span>
+              </button>
+              <h2 className="text-xl font-bold">News ({news.length})</h2>
+            </div>
             <button onClick={() => { resetForm(); setAlbumType("backnumber"); setActiveModal("album"); }} className="text-sm font-bold underline">+ New Backnumber</button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {news.map((n) => (
-              <AdminImageCard
-                key={n.id}
-                id={n.id}
-                title={n.title_en}
-                imageUrl={n.image_url}
-                date={n.published_at}
-                type="news"
-                onDelete={() => handleDeleteNews(n.id)}
-                onAssign={() => {
-                  const aid = prompt("Album ID?");
-                  if (aid) addNewsToAlbumAction(aid, n.id).then(() => alert("Assigned!"));
-                }}
-                onCopyEmbed={() => {
-                  navigator.clipboard.writeText(`[news:${n.id}]`);
-                  alert("Copied to clipboard!");
-                }}
-              />
-            ))}
-          </div>
+          {!collapsedSections.news && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {news.map((n) => (
+                <AdminImageCard
+                  key={n.id}
+                  id={n.id}
+                  title={n.title_en}
+                  imageUrl={n.image_url}
+                  date={n.published_at}
+                  type="news"
+                  onDelete={() => handleDeleteNews(n.id)}
+                  onAssign={() => {
+                    const aid = prompt("Album ID?");
+                    if (aid) addNewsToAlbumAction(aid, n.id).then(() => alert("Assigned!"));
+                  }}
+                  onCopyEmbed={() => {
+                    navigator.clipboard.writeText(`[news:${n.id}]`);
+                    alert("Copied to clipboard!");
+                  }}
+                  onEdit={() => handleEdit({ id: n.id, type: "news", title_en: n.title_en, title_ja: n.title_ja, body_en: n.body_en, body_ja: n.body_ja })}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Albums Section (Hierarchical Display) */}

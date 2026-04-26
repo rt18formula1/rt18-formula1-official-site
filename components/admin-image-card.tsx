@@ -8,10 +8,11 @@ interface AdminImageCardProps {
   onDelete: () => void;
   onAssign: () => void;
   onCopyEmbed: () => void;
+  onEdit: () => void;
   type: "news" | "portfolio";
 }
 
-export function AdminImageCard({ id, title, imageUrl, date, onDelete, onAssign, onCopyEmbed, type }: AdminImageCardProps) {
+export function AdminImageCard({ id, title, imageUrl, date, onDelete, onAssign, onCopyEmbed, onEdit, type }: AdminImageCardProps) {
   return (
     <div data-item-id={id} className="bg-white border border-black/10 rounded-lg overflow-hidden group hover:shadow-md transition-shadow">
       <div className="aspect-square bg-black/5 relative overflow-hidden flex items-center justify-center text-4xl">
@@ -21,6 +22,12 @@ export function AdminImageCard({ id, title, imageUrl, date, onDelete, onAssign, 
           <span>{type === "news" ? "📰" : "🎨"}</span>
         )}
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-4">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="w-full py-1.5 bg-blue-500 text-white text-xs font-bold rounded hover:bg-blue-600 transition"
+          >
+            Edit Title
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); onAssign(); }}
             className="w-full py-1.5 bg-white text-black text-xs font-bold rounded hover:bg-gray-100 transition"

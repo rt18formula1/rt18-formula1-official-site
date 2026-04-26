@@ -20,6 +20,7 @@ export default function PortfolioPageClient({
 }) {
   const { language } = useLanguage();
 
+  const [activeTab, setActiveTab] = useState<"collections" | "albums">("collections");
   const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([
     { id: null, title: language === "ja" ? "ホーム" : "Home" }
   ]);
@@ -27,17 +28,25 @@ export default function PortfolioPageClient({
   const currentAlbumId = breadcrumbs[breadcrumbs.length - 1]?.id ?? null;
 
   const currentLevelAlbums = useMemo(() => {
-    return albums.filter(a => a.type === "portfolio" && a.parent_id === currentAlbumId);
-  }, [albums, currentAlbumId]);
+    if (activeTab === "albums") {
+      return albums.filter(a => a.type === "portfolio" && a.parent_id === currentAlbumId);
+    }
+    return [];
+  }, [albums, currentAlbumId, activeTab]);
 
   const currentLevelWorks = useMemo(() => {
+    if (activeTab === "collections") {
+      // Collectionsタブでは全ての作品を表示
+      return portfolio;
+    }
+    // Albumsタブでは現在のアルバム内の作品を表示
     if (currentAlbumId === null) {
       const inAlbumIds = new Set(mapping.map(m => m.portfolio_id));
       return portfolio.filter(p => !inAlbumIds.has(p.id));
     }
     const itemIds = new Set(mapping.filter(m => m.album_id === currentAlbumId).map(m => m.portfolio_id));
     return portfolio.filter(p => itemIds.has(p.id));
-  }, [portfolio, currentAlbumId, mapping]);
+  }, [portfolio, currentAlbumId, mapping, activeTab]);
 
   const title = language === "ja" ? "ポートフォリオ" : "Portfolio";
 
@@ -50,26 +59,62 @@ export default function PortfolioPageClient({
           <div className="max-w-6xl mx-auto">
             <h1 className="text-3xl md:text-6xl font-black mb-4 md:mb-8 tracking-tighter">{title}</h1>
             
-            <nav className="flex items-center gap-2 md:gap-3 text-xs md:text-sm font-black uppercase tracking-widest text-gray-400 flex-wrap">
-              {breadcrumbs.map((crumb, idx) => (
-                <div key={crumb.id || 'root'} className="flex items-center gap-3">
-                  <button 
-                    onClick={() => setBreadcrumbs(breadcrumbs.slice(0, idx + 1))}
-                    className={`hover:text-black transition-colors ${idx === breadcrumbs.length - 1 ? 'text-black border-b-2 border-black' : ''}`}
-                  >
-                    {crumb.title}
-                  </button>
-                  {idx < breadcrumbs.length - 1 && <span className="opacity-30">/</span>}
-                </div>
-              ))}
-            </nav>
+            {/* Tab Navigation */}
+            <div className="flex border-b border-black/10 mb-8">
+              <button
+                onClick={() => {
+                  setActiveTab("collections");
+                  setBreadcrumbs([{ id: null, title: language === "ja" ? "ホーム" : "Home" }]);
+                }}
+                className={`px-6 py-3 text-sm font-black uppercase tracking-widest transition-colors border-b-2 ${
+                  activeTab === "collections"
+                    ? "text-black border-black"
+                    : "text-gray-400 border-transparent hover:text-gray-600"
+                }`}
+              >
+                {language === "ja" ? "コレクション" : "Collections"}
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab("albums");
+                  setBreadcrumbs([{ id: null, title: language === "ja" ? "ホーム" : "Home" }]);
+                }}
+                className={`px-6 py-3 text-sm font-black uppercase tracking-widest transition-colors border-b-2 ${
+                  activeTab === "albums"
+                    ? "text-black border-black"
+                    : "text-gray-400 border-transparent hover:text-gray-600"
+                }`}
+              >
+                {language === "ja" ? "アルバム" : "Albums"}
+              </button>
+            </div>
+            
+            {/* Breadcrumbs (only show for Albums tab) */}
+            {activeTab === "albums" && (
+              <nav className="flex items-center gap-2 md:gap-3 text-xs md:text-sm font-black uppercase tracking-widest text-gray-400 flex-wrap">
+                {breadcrumbs.map((crumb, idx) => (
+                  <div key={crumb.id || 'root'} className="flex items-center gap-3">
+                    <button 
+                      onClick={() => setBreadcrumbs(breadcrumbs.slice(0, idx + 1))}
+                      className={`hover:text-black transition-colors ${idx === breadcrumbs.length - 1 ? 'text-black border-b-2 border-black' : ''}`}
+                    >
+                      {crumb.title}
+                    </button>
+                    {idx < breadcrumbs.length - 1 && <span className="opacity-30">/</span>}
+                  </div>
+                ))}
+              </nav>
+            )}
           </div>
         </header>
 
         <main className="max-w-6xl mx-auto px-4 py-8 md:py-16">
-          {currentLevelAlbums.length > 0 && (
+          {/* Albums section (only show in Albums tab) */}
+          {activeTab === "albums" && currentLevelAlbums.length > 0 && (
             <div className="mb-20">
-              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-10">Collections</h2>
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-10">
+                {language === "ja" ? "アルバム" : "Albums"}
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
                 {currentLevelAlbums.map((album) => (
                   <button
@@ -103,9 +148,13 @@ export default function PortfolioPageClient({
             </div>
           )}
 
+          {/* Works section */}
           <div>
             <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-10">
-              {currentAlbumId ? "Works in this collection" : "All Works"}
+              {activeTab === "collections" 
+                ? (language === "ja" ? "全作品" : "All Works")
+                : (currentAlbumId ? (language === "ja" ? "このアルバム内の作品" : "Works in this album") : (language === "ja" ? "全作品" : "All Works"))
+              }
             </h2>
             {currentLevelWorks.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
@@ -135,7 +184,12 @@ export default function PortfolioPageClient({
                 ))}
               </div>
             ) : (
-              <p className="text-gray-400 font-bold italic">No works found in this collection.</p>
+              <p className="text-gray-400 font-bold italic">
+                {activeTab === "collections" 
+                  ? (language === "ja" ? "作品が見つかりません" : "No works found")
+                  : (language === "ja" ? "このアルバム内に作品が見つかりません" : "No works found in this album")
+                }
+              </p>
             )}
           </div>
         </main>

@@ -34,15 +34,17 @@ export default function HomeClient({
 
   const homeNews = [...news].slice(0, 3);
   
-  // Only show root albums on home
-  const rootAlbums = albums.filter(a => a.type === "portfolio" && !a.parent_id).slice(0, 3);
-  // If no albums, show recent portfolio items
+  // Always show latest portfolio items (not albums)
   const displayWorks = portfolio.slice(0, 6);
 
-  // Portfolio carousel state
-  const carouselItems = rootAlbums.length > 0
-    ? rootAlbums.map(a => ({ id: a.id, href: `/albums/${a.id}`, imageUrl: a.cover_image_url, title: language === "ja" ? a.name_ja || a.name_en : a.name_en, sub: "Collection" }))
-    : displayWorks.map(w => ({ id: w.id, href: `/portfolio/${w.id}`, imageUrl: w.image_url, title: language === "ja" ? w.title_ja || w.title_en : w.title_en, sub: "" }));
+  // Portfolio carousel state - always use portfolio items
+  const carouselItems = displayWorks.map(w => ({ 
+    id: w.id, 
+    href: `/portfolio/${w.id}`, 
+    imageUrl: w.image_url, 
+    title: language === "ja" ? w.title_ja || w.title_en : w.title_en, 
+    sub: "" 
+  }));
 
   const [carouselIndex, setCarouselIndex] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -170,54 +172,45 @@ export default function HomeClient({
               )}
             </div>
 
-            {/* Desktop: Grid layout */}
+            {/* Desktop: Single column carousel with auto-slide */}
             <div className="hidden lg:block">
-              {rootAlbums.length > 0 ? (
-                <div className="grid grid-cols-3 gap-8">
-                  {rootAlbums.map((album) => (
-                    <Link
-                      key={album.id}
-                      href={`/albums/${album.id}`}
-                      className="group border border-black/10 rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all block"
-                    >
-                      <div className="aspect-square bg-black/5 relative overflow-hidden">
-                        {album.cover_image_url ? (
-                          <img src={album.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-5xl">📁</div>
-                        )}
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="bg-white px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-lg">View Album</span>
-                        </div>
-                      </div>
-                      <div className="p-6">
-                        <h3 className="font-black text-lg mb-1">{language === "ja" ? album.name_ja || album.name_en : album.name_en}</h3>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Collection</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-8">
-                  {displayWorks.map((item) => (
+              <div className="overflow-hidden rounded-2xl">
+                <div
+                  className="flex transition-transform duration-500 ease-in-out"
+                  style={{ transform: `translateX(-${carouselIndex * 100}%)` }}
+                >
+                  {carouselItems.map((item) => (
                     <Link
                       key={item.id}
-                      href={`/portfolio/${item.id}`}
-                      className="group border border-black/10 rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all block hover:-translate-y-1"
+                      href={item.href}
+                      className="w-full shrink-0 group border border-black/10 rounded-2xl overflow-hidden bg-white block"
                     >
                       <div className="aspect-square bg-black/5 relative overflow-hidden">
-                        {item.image_url ? (
-                          <img src={item.image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-5xl">🎨</div>
                         )}
                       </div>
                       <div className="p-6">
-                        <h3 className="font-black text-lg group-hover:text-blue-600 transition-colors line-clamp-2">
-                          {language === "ja" ? item.title_ja || item.title_en : item.title_en}
-                        </h3>
+                        <h3 className="font-black text-lg line-clamp-2">{item.title}</h3>
+                        {item.sub && <p className="text-xs font-bold text-gray-400 uppercase tracking-tighter mt-1">{item.sub}</p>}
                       </div>
                     </Link>
+                  ))}
+                </div>
+              </div>
+              {/* Dots indicator */}
+              {carouselItems.length > 1 && (
+                <div className="flex justify-center gap-2 mt-4">
+                  {carouselItems.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className={`w-2.5 h-2.5 rounded-full transition-all ${idx === carouselIndex ? "bg-black scale-110" : "bg-black/20"}`}
+                      onClick={() => goTo(idx)}
+                      aria-label={`Slide ${idx + 1}`}
+                    />
                   ))}
                 </div>
               )}
