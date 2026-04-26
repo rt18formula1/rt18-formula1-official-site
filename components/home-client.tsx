@@ -30,7 +30,9 @@ export default function HomeClient({
       ? "F1ファンアート、イラスト、最新のF1ニュースをチェックしてください。rt18_formula1は、象徴的なF1の瞬間、ドライバー、マシンを題材にした作品で、F1の世界観に浸れるビジュアルコンテンツを制作しています。"
       : "Check out F1 fan art, illustrations, and the latest F1 news. rt18_formula1 creates visual content to immerse you in Formula 1. Featuring exquisite artwork of iconic F1 moments, drivers, and cars. Follow and share the latest F1 news, session results, and creative illustrations every day.";
 
-  const homeNews = [...news].slice(0, 3);
+  const homeNews = [...news]
+    .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+    .slice(0, 3);
   
   // Always show latest portfolio items (not albums)
   const displayWorks = portfolio.slice(0, 9);

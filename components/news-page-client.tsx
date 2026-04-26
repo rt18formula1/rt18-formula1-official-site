@@ -24,7 +24,10 @@ export default function NewsPageClient({
   
   // News not in any album (Recent News)
   const albumNewsIds = new Set(mapping.map(m => m.news_id));
-  const recentNews = news.filter(n => !albumNewsIds.has(n.id)).slice(0, 10);
+  const recentNews = [...news]
+    .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+    .filter(n => !albumNewsIds.has(n.id))
+    .slice(0, 10);
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">

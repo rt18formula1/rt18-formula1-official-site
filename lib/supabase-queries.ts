@@ -146,10 +146,12 @@ export async function uploadImageToStorage(
 
 export async function getNewsList() {
   if (!supabase) return [];
+  
+  // Try explicit ordering to ensure latest first
   const { data, error } = await supabase
     .from("news")
     .select("*")
-    .order("published_at", { ascending: false });
+    .order("published_at", { ascending: false }); // Order by published_at descending (latest first)
 
   if (error) {
     console.error("Error fetching news:", error);
@@ -161,6 +163,7 @@ export async function getNewsList() {
     console.log("News order (first 3 items):", data.slice(0, 3).map(n => ({
       id: n.id,
       title: n.title_en,
+      created_at: n.created_at,
       published_at: n.published_at
     })));
   }
