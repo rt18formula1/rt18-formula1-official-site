@@ -6,17 +6,15 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { useLanguage } from "@/components/providers/language-provider";
 import { linktreeLinks, snsLinks } from "@/lib/content";
-import type { DbNews, DbPortfolio, DbAlbum, DbEvent } from "@/lib/supabase-queries";
+import type { DbNews, DbPortfolio, DbEvent } from "@/lib/supabase-queries";
 
 export default function HomeClient({ 
   news, 
   portfolio,
-  albums = [],
   events = []
 }: { 
   news: DbNews[]; 
   portfolio: DbPortfolio[];
-  albums?: DbAlbum[];
   events?: DbEvent[];
 }) {
   const { language, t } = useLanguage();
@@ -35,7 +33,7 @@ export default function HomeClient({
   const homeNews = [...news].slice(0, 3);
   
   // Always show latest portfolio items (not albums)
-  const displayWorks = portfolio.slice(0, 6);
+  const displayWorks = portfolio.slice(0, 3);
 
   // Portfolio carousel state - always use portfolio items
   const carouselItems = displayWorks.map(w => ({ 

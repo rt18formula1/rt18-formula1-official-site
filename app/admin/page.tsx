@@ -25,12 +25,13 @@ import {
   createEventAction,
   deleteEventAction,
 } from "@/lib/admin-actions";
-import {
-  updateNewsTitle,
-  updatePortfolioTitle,
-  updateNewsContent,
-  updatePortfolioContent,
-} from "@/lib/admin-edit-actions";
+// Edit actions will be used when implementing the edit modal
+// import {
+//   updateNewsTitle,
+//   updatePortfolioTitle,
+//   updateNewsContent,
+//   updatePortfolioContent,
+// } from "@/lib/admin-edit-actions";
 
 import { AdminImageCard } from "@/components/admin-image-card";
 
@@ -56,7 +57,7 @@ export default function AdminPage() {
   // Album Modal State
   const [activeModal, setActiveModal] = useState<"news" | "portfolio" | "album" | "event" | "edit" | null>(null);
   const [albumType, setAlbumType] = useState<"backnumber" | "portfolio">("portfolio");
-  const [editItem, setEditItem] = useState<{ id: string; type: "news" | "portfolio"; title_en: string; title_ja: string; body_en?: string; body_ja?: string } | null>(null);
+  // const [editItem, setEditItem] = useState<{ id: string; type: "news" | "portfolio"; title_en: string; title_ja: string; body_en?: string; body_ja?: string } | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -248,20 +249,9 @@ export default function AdminPage() {
   };
 
   const handleEdit = (item: { id: string; type: "news" | "portfolio"; title_en: string; title_ja: string; body_en?: string; body_ja?: string }) => {
-    setEditItem(item);
-    setFormData({
-      title: item.title_en,
-      content: item.body_en || "",
-      file: null,
-      previewUrl: "",
-      albumId: "",
-      parentId: "",
-      location: "",
-      startTime: "",
-      endTime: "",
-    });
-    setActiveModal("edit");
-  };
+  // 編集機能は後で実装
+  alert(`Edit functionality for ${item.type} ID: ${item.id} will be implemented soon.`);
+};
 
   if (!sessionOk) {
     return (

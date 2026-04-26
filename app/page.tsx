@@ -1,15 +1,14 @@
 import HomeClient from "@/components/home-client";
-import { getNewsList, getPortfolioList, getAlbumsByType, getEvents } from "@/lib/supabase-queries";
+import { getNewsList, getPortfolioList, getEvents } from "@/lib/supabase-queries";
 import { fetchGoogleEvents } from "@/lib/calendar-service";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 export default async function Home() {
-  const [news, portfolio, albums, manualEvents, googleEvents] = await Promise.all([
+  const [news, portfolio, manualEvents, googleEvents] = await Promise.all([
     getNewsList(),
     getPortfolioList(),
-    getAlbumsByType("portfolio"),
     getEvents(),
     fetchGoogleEvents(),
   ]);
@@ -33,7 +32,7 @@ export default async function Home() {
 
   return (
     <>
-      <HomeClient news={news} portfolio={portfolio} albums={albums} events={allEvents} />
+      <HomeClient news={news} portfolio={portfolio} events={allEvents} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
     </>
   );

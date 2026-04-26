@@ -39,10 +39,10 @@ export default function PortfolioPageClient({
       // Collectionsタブでは全ての作品を表示
       return portfolio;
     }
-    // Albumsタブでは現在のアルバム内の作品を表示
+    // Albumsタブでは現在のアルバム内の作品のみを表示
     if (currentAlbumId === null) {
-      const inAlbumIds = new Set(mapping.map(m => m.portfolio_id));
-      return portfolio.filter(p => !inAlbumIds.has(p.id));
+      // ルートレベルでは作品を表示しない（アルバムのみを表示）
+      return [];
     }
     const itemIds = new Set(mapping.filter(m => m.album_id === currentAlbumId).map(m => m.portfolio_id));
     return portfolio.filter(p => itemIds.has(p.id));
