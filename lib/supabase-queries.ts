@@ -155,6 +155,16 @@ export async function getNewsList() {
     console.error("Error fetching news:", error);
     return [];
   }
+  
+  // Debug: Log the order of news items
+  if (data && data.length > 0) {
+    console.log("News order (first 3 items):", data.slice(0, 3).map(n => ({
+      id: n.id,
+      title: n.title_en,
+      published_at: n.published_at
+    })));
+  }
+  
   return data as DbNews[];
 }
 
