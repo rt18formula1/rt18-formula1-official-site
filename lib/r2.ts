@@ -5,7 +5,21 @@ const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || "";
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || "";
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || "";
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "";
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
+const R2_PUBLIC_URL_RAW = process.env.R2_PUBLIC_URL || "";
+
+function normalizeR2PublicUrl(raw: string): string {
+  let url = raw.trim();
+  if (!url) return "";
+  if (!url.startsWith("https://") && !url.startsWith("http://")) {
+    url = `https://${url}`;
+  }
+  if (!url.includes(".r2.dev") && !url.includes(".")) {
+    url = `${url}.r2.dev`;
+  }
+  return url.endsWith("/") ? url.slice(0, -1) : url;
+}
+
+const R2_PUBLIC_URL = normalizeR2PublicUrl(R2_PUBLIC_URL_RAW);
 
 function assertR2Config() {
   if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET_NAME) {
@@ -14,8 +28,8 @@ function assertR2Config() {
   if (!R2_PUBLIC_URL) {
     throw new Error(
       "R2_PUBLIC_URL is not set. Set it to your R2 bucket's public URL " +
-      "(e.g. https://pub-xxxx.r2.dev). Do NOT use the account ID — " +
-      "find the correct URL in Cloudflare Dashboard > R2 > your bucket > Settings > Public access."
+      "(e.g. https://pub-xxxx.r2.dev). " +
+      "Find the correct URL in Cloudflare Dashboard > R2 > your bucket > Settings > Public access."
     );
   }
 }
@@ -39,8 +53,7 @@ export async function getPresignedUrl(key: string, contentType: string) {
 
   // 署名付きURLを生成（有効期限を15分に延長）
   const url = await getSignedUrl(r2Client, command, { expiresIn: 900 });
-  const baseUrl = R2_PUBLIC_URL.endsWith("/") ? R2_PUBLIC_URL.slice(0, -1) : R2_PUBLIC_URL;
-  const publicUrl = `${baseUrl}/${key}`;
+  const publicUrl = `${R2_PUBLIC_URL}/${key}`;
 
   return { uploadUrl: url, publicUrl };
 }
