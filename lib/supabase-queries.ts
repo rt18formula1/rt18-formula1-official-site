@@ -88,10 +88,6 @@ export async function uploadImageToStorage(
     method: "PUT",
     headers: {
       "Content-Type": file.type || "application/octet-stream",
-      // CORS対応のための追加ヘッダー
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "PUT, POST, GET, OPTIONS, DELETE",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization, Content-MD5",
     },
     body: file,
   });
