@@ -33,7 +33,7 @@ export default function HomeClient({
   const homeNews = [...news].slice(0, 3);
   
   // Always show latest portfolio items (not albums)
-  const displayWorks = portfolio.slice(0, 3);
+  const displayWorks = portfolio.slice(0, 9);
 
   // Portfolio carousel state - always use portfolio items
   const carouselItems = displayWorks.map(w => ({ 
@@ -170,18 +170,18 @@ export default function HomeClient({
               )}
             </div>
 
-            {/* Desktop: Single column carousel with auto-slide */}
+            {/* Desktop: 3-column carousel with auto-slide */}
             <div className="hidden lg:block">
               <div className="overflow-hidden rounded-2xl">
                 <div
                   className="flex transition-transform duration-500 ease-in-out"
-                  style={{ transform: `translateX(-${carouselIndex * 100}%)` }}
+                  style={{ transform: `translateX(-${carouselIndex * (100/3)}%)` }}
                 >
                   {carouselItems.map((item) => (
                     <Link
                       key={item.id}
                       href={item.href}
-                      className="w-full shrink-0 group border border-black/10 rounded-2xl overflow-hidden bg-white block"
+                      className="w-1/3 shrink-0 group border border-black/10 rounded-2xl overflow-hidden bg-white block px-2"
                     >
                       <div className="aspect-square bg-black/5 relative overflow-hidden">
                         {item.imageUrl ? (
