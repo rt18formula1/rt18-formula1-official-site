@@ -46,11 +46,11 @@ export default function PortfolioPageClient({
       <SiteHeader />
       
       <div className="flex-1">
-        <header className="bg-white border-b border-black/10 py-16 px-4">
+        <header className="bg-white border-b border-black/10 py-8 md:py-16 px-4">
           <div className="max-w-6xl mx-auto">
-            <h1 className="text-6xl font-black mb-8 tracking-tighter">{title}</h1>
+            <h1 className="text-3xl md:text-6xl font-black mb-4 md:mb-8 tracking-tighter">{title}</h1>
             
-            <nav className="flex items-center gap-3 text-sm font-black uppercase tracking-widest text-gray-400">
+            <nav className="flex items-center gap-2 md:gap-3 text-xs md:text-sm font-black uppercase tracking-widest text-gray-400 flex-wrap">
               {breadcrumbs.map((crumb, idx) => (
                 <div key={crumb.id || 'root'} className="flex items-center gap-3">
                   <button 
@@ -66,11 +66,11 @@ export default function PortfolioPageClient({
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto px-4 py-16">
+        <main className="max-w-6xl mx-auto px-4 py-8 md:py-16">
           {currentLevelAlbums.length > 0 && (
             <div className="mb-20">
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-10">Collections</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
                 {currentLevelAlbums.map((album) => (
                   <button
                     key={album.id}
@@ -91,8 +91,8 @@ export default function PortfolioPageClient({
                         <span className="bg-white px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">Explore</span>
                       </div>
                     </div>
-                    <div className="p-8">
-                      <h3 className="font-black text-2xl mb-2">{language === "ja" ? album.name_ja || album.name_en : album.name_en}</h3>
+                    <div className="p-4 md:p-8">
+                      <h3 className="font-black text-lg md:text-2xl mb-2">{language === "ja" ? album.name_ja || album.name_en : album.name_en}</h3>
                       <p className="text-sm text-gray-500 font-medium leading-relaxed line-clamp-2">
                         {language === "ja" ? album.description_ja || album.description_en : album.description_en}
                       </p>
@@ -108,7 +108,7 @@ export default function PortfolioPageClient({
               {currentAlbumId ? "Works in this collection" : "All Works"}
             </h2>
             {currentLevelWorks.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
                 {currentLevelWorks.map((work) => (
                   <Link
                     key={work.id}
@@ -126,8 +126,8 @@ export default function PortfolioPageClient({
                         <div className="w-full h-full flex items-center justify-center text-5xl">🎨</div>
                       )}
                     </div>
-                    <div className="p-8">
-                      <h3 className="font-black text-xl group-hover:text-blue-600 transition-colors">
+                    <div className="p-4 md:p-8">
+                      <h3 className="font-black text-base md:text-xl group-hover:text-blue-600 transition-colors">
                         {language === "ja" ? work.title_ja || work.title_en : work.title_en}
                       </h3>
                     </div>

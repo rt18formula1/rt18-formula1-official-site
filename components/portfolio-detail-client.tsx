@@ -31,13 +31,13 @@ export default function PortfolioDetailClient({ portfolioItem }: { portfolioItem
         </div>
       </header>
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-4xl font-bold mb-2">
+        <div className="mb-6 md:mb-8">
+          <h2 className="text-2xl md:text-4xl font-bold mb-2">
             {language === "ja" ? portfolioItem.title_ja || portfolioItem.title_en : portfolioItem.title_en}
           </h2>
           <p className="text-gray-500">{portfolioItem.created_at?.split("T")[0]}</p>
         </div>
-        <div className="w-full bg-black/5 border border-black/10 rounded-lg overflow-hidden aspect-video flex items-center justify-center text-7xl relative">
+        <div className="w-full bg-black/5 border border-black/10 rounded-lg overflow-hidden aspect-square md:aspect-video flex items-center justify-center text-7xl relative">
           {portfolioItem.image_url ? (
             <Image src={portfolioItem.image_url} alt="Portfolio image" fill className="object-cover" />
           ) : (

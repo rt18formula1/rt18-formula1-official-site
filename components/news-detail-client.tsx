@@ -74,15 +74,15 @@ export default function NewsDetailClient({
     <div className="min-h-screen bg-white text-black flex flex-col">
       <SiteHeader />
       <main className="flex-1">
-        <article className="max-w-3xl mx-auto px-4 py-12">
+        <article className="max-w-3xl mx-auto px-4 py-6 md:py-12">
           <header className="mb-12 border-b border-black/10 pb-8">
             <Link href="/news" className="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-black transition-colors flex items-center gap-2 group mb-8">
               <span className="group-hover:-translate-x-1 transition-transform">←</span> Back to News
             </Link>
             <p className="text-sm font-bold text-gray-400 mb-4">{newsItem.published_at.split("T")[0]}</p>
-            <h1 className="text-4xl md:text-5xl font-black mb-8 tracking-tighter leading-tight">{title}</h1>
+            <h1 className="text-2xl md:text-5xl font-black mb-6 md:mb-8 tracking-tighter leading-tight">{title}</h1>
             {newsItem.image_url && (
-              <div className="aspect-video relative rounded-3xl overflow-hidden bg-black/5 border border-black/10 shadow-xl">
+              <div className="aspect-video relative rounded-2xl md:rounded-3xl overflow-hidden bg-black/5 border border-black/10 shadow-xl">
                 <img src={newsItem.image_url} alt={title} className="w-full h-full object-cover" />
               </div>
             )}
