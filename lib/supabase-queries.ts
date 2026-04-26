@@ -151,7 +151,7 @@ export async function getNewsList() {
   const { data, error } = await supabase
     .from("news")
     .select("*")
-    .order("published_at", { ascending: false }); // Order by published_at descending (latest first)
+    .order("created_at", { ascending: false }); // Order by created_at descending (newest first)
 
   if (error) {
     console.error("Error fetching news:", error);
