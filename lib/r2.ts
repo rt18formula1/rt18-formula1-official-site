@@ -28,10 +28,6 @@ export async function getPresignedUrl(key: string, contentType: string) {
     Bucket: R2_BUCKET_NAME,
     Key: key,
     ContentType: contentType,
-    // CORS対応のための追加ヘッダー
-    Metadata: {
-      "Access-Control-Allow-Origin": "*",
-    },
   });
 
   // 署名付きURLを生成（有効期限を15分に延長）
