@@ -58,6 +58,18 @@ export async function getPresignedUrl(key: string, contentType: string) {
   return { uploadUrl: url, publicUrl };
 }
 
+export async function uploadToR2(key: string, body: Buffer | Uint8Array, contentType: string) {
+  assertR2Config();
+  const command = new PutObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    Key: key,
+    ContentType: contentType,
+    Body: body,
+  });
+  await r2Client.send(command);
+  return `${R2_PUBLIC_URL}/${key}`;
+}
+
 export function buildR2ObjectKey(folder: string, originalFileName: string) {
   const ext = originalFileName.includes(".") ? originalFileName.split(".").pop() : "bin";
   const safeExt = (ext || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");

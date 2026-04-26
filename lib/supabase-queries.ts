@@ -54,15 +54,13 @@ export type DbEvent = {
 // Storage Upload
 // ----------------------------------------------------------------------
 
-export async function uploadImageToStorage(
-  bucket: "news-images" | "portfolio-images" | "album-covers" | "bucknumber-covers",
+async function uploadViaPresignedUrl(
+  bucket: string,
   file: File
 ): Promise<string> {
   const signRes = await fetch("/api/admin/upload", {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({
       bucket,
       fileName: file.name,
@@ -76,36 +74,70 @@ export async function uploadImageToStorage(
       const err = await signRes.json();
       errMsg = err.error || errMsg;
     } catch { /* ignore json parse error */ }
-    throw new Error(`画像アップロード準備に失敗しました: ${errMsg} (HTTP ${signRes.status})`);
+    throw new Error(`presigned: ${errMsg} (HTTP ${signRes.status})`);
   }
 
   const signed = (await signRes.json()) as { uploadUrl?: string; url?: string };
   if (!signed.uploadUrl || !signed.url) {
-    throw new Error("アップロードURLの取得に失敗しました");
+    throw new Error("presigned: アップロードURLの取得に失敗しました");
   }
 
   const uploadRes = await fetch(signed.uploadUrl, {
     method: "PUT",
-    headers: {
-      "Content-Type": file.type || "application/octet-stream",
-    },
+    headers: { "Content-Type": file.type || "application/octet-stream" },
     body: file,
   });
 
   if (!uploadRes.ok) {
     const message = await uploadRes.text().catch(() => "Unknown upload error");
-    console.error("R2 upload failed:", {
-      status: uploadRes.status,
-      statusText: uploadRes.statusText,
-      message,
-      uploadUrl: signed.uploadUrl,
-      contentType: file.type,
-      fileSize: file.size,
-    });
-    throw new Error(`R2 への直接アップロードに失敗しました: ${message} (HTTP ${uploadRes.status})`);
+    throw new Error(`presigned: R2 PUT failed: ${message} (HTTP ${uploadRes.status})`);
   }
 
   return signed.url;
+}
+
+async function uploadViaDirect(
+  bucket: string,
+  file: File
+): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("bucket", bucket);
+
+  const res = await fetch("/api/admin/upload-direct", {
+    method: "POST",
+    body: form,
+  });
+
+  if (!res.ok) {
+    let errMsg = "Upload failed";
+    try {
+      const err = await res.json();
+      errMsg = err.error || errMsg;
+    } catch { /* ignore json parse error */ }
+    throw new Error(`direct: ${errMsg} (HTTP ${res.status})`);
+  }
+
+  const data = (await res.json()) as { url?: string };
+  if (!data.url) {
+    throw new Error("direct: URLの取得に失敗しました");
+  }
+  return data.url;
+}
+
+export async function uploadImageToStorage(
+  bucket: "news-images" | "portfolio-images" | "album-covers" | "bucknumber-covers",
+  file: File
+): Promise<string> {
+  // Try presigned URL first (supports large files, no server payload limit)
+  try {
+    return await uploadViaPresignedUrl(bucket, file);
+  } catch (presignedErr) {
+    console.warn("Presigned URL upload failed, falling back to direct upload:", presignedErr);
+  }
+
+  // Fallback: upload through server (limited to ~4.5MB by Vercel)
+  return await uploadViaDirect(bucket, file);
 }
 
 // ----------------------------------------------------------------------
