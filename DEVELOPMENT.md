@@ -44,6 +44,34 @@
 - `.env.example` に R2 必須環境変数 (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`) を追記。
 - これにより、Vercel 経由アップロードで発生していた 413 を構造的に回避。
 
+### 2026-04-26 追記: R2 画像アップロード障害の修正 (PR #1〜#4)
+
+署名付きURL方式への移行後、画像が全くアップロードできない（表示されない）問題が発生。以下4つのPRで段階的に修正した。
+
+#### PR #1: 署名不一致の修正
+- **原因**: `PutObjectCommand` に `Metadata: { "Access-Control-Allow-Origin": "*" }` を含めていたため、署名付きURLが `x-amz-meta-access-control-allow-origin` ヘッダーを要求。ブラウザ側のPUTリクエストではこのヘッダーを送信しないため、R2が署名不一致で拒否。
+- **修正**: `Metadata` をPutObjectCommandから削除。CORSはR2バケットレベルの設定で管理する。
+
+#### PR #2: R2_PUBLIC_URL の必須化
+- **原因**: `R2_PUBLIC_URL` 未設定時のデフォルト値が `https://pub-${R2_ACCOUNT_ID}.r2.dev` だったが、R2の公開URLはアカウントIDではなくバケット固有のハッシュを使用する。誤ったURLが生成され、画像はR2にアップロード済みにもかかわらず表示できなかった。
+- **修正**: デフォルト値を削除し、`R2_PUBLIC_URL` を必須環境変数に変更。未設定時はエラーメッセージで正しい設定方法を案内。
+
+#### PR #3: R2_PUBLIC_URL の自動正規化
+- **原因**: Vercelの環境変数に `pub-xxx` のように `https://` や `.r2.dev` を含まない値が設定されていた。結果、画像URLが相対パスとして保存され404エラー。
+- **修正**: `normalizeR2PublicUrl()` 関数を追加。`https://` や `.r2.dev` が欠けていても自動補完する。
+
+#### PR #4: サーバー側アップロードフォールバック
+- **目的**: 署名付きURL（CORS経由）が失敗した場合の安定性向上。
+- **実装**:
+  - `lib/r2.ts` に `uploadToR2()` 関数を追加（サーバー側から直接R2にアップロード）。
+  - `/api/admin/upload-direct` エンドポイントを新設（FormDataでファイル受信→R2に直接アップロード）。
+  - `uploadImageToStorage()` を改修: まず署名付きURLでアップロードを試行し、失敗時はサーバー経由にフォールバック。
+- **注意**: サーバー経由のフォールバックにはVercelの4.5MBペイロード制限が適用される。
+
+#### 環境変数の設定
+- Vercelに `R2_PUBLIC_URL` を設定済み。値は Cloudflare Dashboard > R2 > バケット > Settings > Public access で確認可能。
+- R2バケットのCORS設定は `r2-cors.json` の内容が適用済み。
+
 ### 課題: Cloudflare R2 の公開URL制限
 - **現状**: `pub-*.r2.dev` ドメインを使用中だが、レートリミットがあり本番には非推奨。
 - **解決策**: カスタムドメイン（例: `media.rt18-formula1.com`）を Cloudflare 上で設定する。
@@ -52,7 +80,8 @@
 
 ## 次にやること
 
-1. **署名付きURLの実装完了**: ブラウザ側から直接 R2 へ PUT 送信するロジックの完成。
+1. ~~**署名付きURLの実装完了**~~: 完了済み（PR #1〜#4で修正・フォールバック含め実装完了）。
 2. **問い合わせフォームの疎通**: Contact セクションに実際の送信ロジック（Resend 等）を統合。
 3. **カレンダー機能の強化**: Google Calendar API 連携や iCal 書き出しの最適化。
 4. **SEO/OGP 強化**: SNS シェア時のプレビュー画像の動的生成。
+5. **R2 カスタムドメイン設定**: `pub-*.r2.dev` からカスタムドメインへの移行（レートリミット回避）。
