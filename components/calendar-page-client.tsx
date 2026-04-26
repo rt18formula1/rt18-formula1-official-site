@@ -41,11 +41,11 @@ export default function CalendarPageClient({ initialEvents }: { initialEvents: D
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
       <SiteHeader />
-      <main className="flex-1 container mx-auto px-4 py-20 max-w-6xl">
-        <header className="mb-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-8">
+      <main className="flex-1 container mx-auto px-4 py-8 md:py-20 max-w-6xl">
+        <header className="mb-6 md:mb-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-8 mb-6 md:mb-8">
             <div>
-              <h1 className="text-5xl font-black tracking-tighter">Calendar</h1>
+              <h1 className="text-3xl md:text-5xl font-black tracking-tighter">Calendar</h1>
             </div>
             <div className="flex flex-wrap gap-4">
               <a
@@ -58,9 +58,9 @@ export default function CalendarPageClient({ initialEvents }: { initialEvents: D
           </div>
         </header>
 
-        <div className="bg-white border border-black/10 rounded-[32px] overflow-hidden shadow-2xl">
-          <div className="p-8 border-b border-black/10 flex items-center justify-between bg-gray-50/50">
-            <h2 className="text-3xl font-black tracking-tighter uppercase">
+        <div className="bg-white border border-black/10 rounded-2xl md:rounded-[32px] overflow-hidden shadow-2xl">
+          <div className="p-4 md:p-8 border-b border-black/10 flex items-center justify-between bg-gray-50/50">
+            <h2 className="text-xl md:text-3xl font-black tracking-tighter uppercase">
               {format(currentDate, "MMMM yyyy")}
             </h2>
             <div className="flex gap-2">
@@ -84,10 +84,10 @@ export default function CalendarPageClient({ initialEvents }: { initialEvents: D
               return (
                 <div
                   key={idx}
-                  className={`min-h-[140px] p-4 bg-white transition-all hover:bg-gray-50/50 ${!isCurrentMonth ? "opacity-30" : ""}`}
+                  className={`min-h-[60px] md:min-h-[140px] p-1 md:p-4 bg-white transition-all hover:bg-gray-50/50 ${!isCurrentMonth ? "opacity-30" : ""}`}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <span className={`text-lg font-black tracking-tighter ${isToday ? "w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full" : ""}`}>
+                    <span className={`text-xs md:text-lg font-black tracking-tighter ${isToday ? "w-6 h-6 md:w-8 md:h-8 flex items-center justify-center bg-blue-600 text-white rounded-full" : ""}`}>
                       {format(day, "d")}
                     </span>
                   </div>

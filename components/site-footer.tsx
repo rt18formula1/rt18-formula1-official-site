@@ -3,9 +3,9 @@ import { snsLinks } from "@/lib/content";
 
 export function SiteFooter() {
   return (
-    <footer className="bg-black text-white pt-24 pb-12">
+    <footer className="bg-black text-white pt-12 md:pt-24 pb-8 md:pb-12">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-16 mb-24">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-16 mb-12 md:mb-24">
           {/* Logo & Info */}
           <div className="space-y-8">
             <div>
