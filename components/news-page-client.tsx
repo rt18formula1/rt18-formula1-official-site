@@ -1,113 +1,119 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { useLanguage } from "@/components/providers/language-provider";
 import type { DbNews, DbAlbum } from "@/lib/supabase-queries";
-import Image from "next/image";
 
-export default function NewsPageClient({ news, albums }: { news: DbNews[]; albums: DbAlbum[] }) {
-  const { t, language } = useLanguage();
-  const [tab, setTab] = useState<"all" | "albums">("all");
+export default function NewsPageClient({ 
+  news, 
+  albums,
+  mapping = [] 
+}: { 
+  news: DbNews[]; 
+  albums: DbAlbum[];
+  mapping?: { news_id: string; album_id: string }[];
+}) {
+  const { language } = useLanguage();
 
-  const labels =
-    language === "ja"
-      ? { all: "すべて", albums: "バックナンバー（アルバム）", emptyAlbums: "アルバムがありません" }
-      : { all: "All", albums: "Backnumbers (Albums)", emptyAlbums: "No albums yet" };
+  // Root albums for backnumbers
+  const rootAlbums = albums.filter(a => a.type === "backnumber" && !a.parent_id);
+  
+  // News not in any album (Recent News)
+  const albumNewsIds = new Set(mapping.map(m => m.news_id));
+  const recentNews = news.filter(n => !albumNewsIds.has(n.id)).slice(0, 10);
 
   return (
-    <div className="min-h-screen bg-white text-black">
+    <div className="min-h-screen bg-white text-black flex flex-col">
       <SiteHeader />
+      <div className="flex-1">
+        <header className="bg-white border-b border-black/10 py-20 px-4">
+          <div className="max-w-6xl mx-auto">
+            <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-4 uppercase">News</h1>
+            <div className="h-2 w-24 bg-black mb-8" />
+            <p className="text-xl text-gray-500 font-medium max-w-2xl leading-relaxed">
+              Stay updated with the latest F1 session results, race analysis, and paddock stories.
+            </p>
+          </div>
+        </header>
 
-      <div className="border-b border-black/10">
-        <div className="container mx-auto px-4 flex gap-8">
-          <button
-            type="button"
-            onClick={() => setTab("all")}
-            className={`py-4 px-2 font-semibold border-b-2 ${tab === "all" ? "border-black" : "border-transparent hover:underline"}`}
-          >
-            {labels.all}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("albums")}
-            className={`py-4 px-2 font-semibold border-b-2 ${tab === "albums" ? "border-black" : "border-transparent hover:underline"}`}
-          >
-            {labels.albums}
-          </button>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-12 max-w-2xl">
-        {tab === "all" ? (
-          <>
-            <h1 className="text-4xl font-black mb-12">{t("navNews")}</h1>
-            <div className="space-y-6">
-              {news.map((newsItem) => (
+        <main className="max-w-6xl mx-auto px-4 py-20">
+          {/* Backnumbers (Albums) */}
+          <section className="mb-32">
+            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-400 mb-12 flex items-center gap-4">
+              Backnumbers <div className="h-px flex-1 bg-black/5" />
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              {rootAlbums.map((album) => (
                 <Link
-                  key={newsItem.id}
-                  href={`/news/${newsItem.id}`}
-                  className="border border-black/10 rounded-lg overflow-hidden hover:shadow-lg transition cursor-pointer block"
+                  key={album.id}
+                  href={`/backnumber/${album.id}`}
+                  className="group border border-black/10 rounded-3xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
                 >
-                  <div className="p-6">
-                    <div className="flex gap-4 mb-4">
-                      <div className="w-24 h-24 bg-black/5 border border-black/10 rounded flex items-center justify-center flex-shrink-0 text-2xl relative overflow-hidden">
-                        {newsItem.image_url ? (
-                          <Image src={newsItem.image_url} alt="News thumbnail" fill className="object-cover" />
-                        ) : (
-                          <span>📰</span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm mb-2 text-gray-500">{newsItem.published_at}</p>
-                        <h2 className="text-2xl font-bold mb-3">
-                          {language === "ja" ? newsItem.title_ja || newsItem.title_en : newsItem.title_en}
-                        </h2>
-                        {/* Note: JSONB content rendering might need specific handling later */}
-                      </div>
-                    </div>
-                    <div className="font-semibold hover:underline">{t("readMore")}</div>
+                  <div className="aspect-video bg-black/5 relative overflow-hidden">
+                    {album.cover_image_url ? (
+                      <img 
+                        src={album.cover_image_url} 
+                        alt="" 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-5xl">📁</div>
+                    )}
+                  </div>
+                  <div className="p-8">
+                    <h3 className="text-2xl font-black mb-3">{album.name_en}</h3>
+                    <p className="text-sm text-gray-500 font-medium leading-relaxed line-clamp-2">
+                      {album.description_en}
+                    </p>
                   </div>
                 </Link>
               ))}
             </div>
-          </>
-        ) : (
-          <>
-            <h1 className="text-4xl font-black mb-8">{labels.albums}</h1>
-            {albums.length === 0 ? (
-              <p>{labels.emptyAlbums}</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {albums.map((album) => (
+          </section>
+
+          {/* Latest News */}
+          <section>
+            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-400 mb-12 flex items-center gap-4">
+              Latest Updates <div className="h-px flex-1 bg-black/5" />
+            </h2>
+            <div className="grid grid-cols-1 gap-8">
+              {recentNews.length > 0 ? (
+                recentNews.map((item) => (
                   <Link
-                    key={album.id}
-                    href={`/backnumber/${album.id}`}
-                    className="bg-white border border-black/10 rounded-lg overflow-hidden block hover:shadow-lg transition-shadow"
+                    key={item.id}
+                    href={`/news/${item.id}`}
+                    className="group flex flex-col md:flex-row gap-10 border border-black/10 rounded-3xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-500 p-8"
                   >
-                    <div className="w-full aspect-square bg-black/5 border-b border-black/10 flex items-center justify-center text-4xl relative">
-                      {album.cover_image_url ? (
-                        <Image src={album.cover_image_url} alt="Album cover" fill className="object-cover" />
+                    <div className="w-full md:w-64 aspect-video bg-black/5 rounded-2xl overflow-hidden flex-shrink-0">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                       ) : (
-                        <span>📁</span>
+                        <div className="w-full h-full flex items-center justify-center text-6xl">📰</div>
                       )}
                     </div>
-                    <div className="p-4">
-                      <h3 className="font-bold text-black">
-                        {language === "ja" ? album.name_ja || album.name_en : album.name_en}
-                      </h3>
-                      <p className="text-sm mt-2 text-gray-600 line-clamp-2">
-                        {language === "ja" ? album.description_ja || album.description_en : album.description_en}
+                    <div className="flex flex-col justify-center">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+                        {item.published_at.split("T")[0]}
                       </p>
+                      <h3 className="text-3xl md:text-4xl font-black mb-6 group-hover:text-blue-600 transition-colors leading-tight tracking-tight">
+                        {language === "ja" ? item.title_ja || item.title_en : item.title_en}
+                      </h3>
+                      <div className="flex items-center gap-2 text-sm font-black uppercase tracking-widest group-hover:translate-x-2 transition-transform">
+                        Read Article <span>→</span>
+                      </div>
                     </div>
                   </Link>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+                ))
+              ) : (
+                <p className="text-center py-20 text-gray-400 font-bold italic">No recent news found.</p>
+              )}
+            </div>
+          </section>
+        </main>
       </div>
+      <SiteFooter />
     </div>
   );
 }

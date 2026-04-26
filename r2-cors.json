@@ -1,0 +1,23 @@
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": [
+        "http://localhost:3000",
+        "https://rt18-formula1-official-site.vercel.app"
+      ],
+      "AllowedMethods": [
+        "GET",
+        "PUT",
+        "POST",
+        "DELETE",
+        "HEAD"
+      ],
+      "AllowedHeaders": [
+        "Content-Type",
+        "Authorization",
+        "Content-MD5"
+      ],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+}

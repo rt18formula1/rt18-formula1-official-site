@@ -2,14 +2,15 @@ import { SiteHeader } from "@/components/site-header";
 import { getAlbumsByType, getPortfolioByAlbumId } from "@/lib/supabase-queries";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 
 export const revalidate = 60;
 
-export default async function PortfolioAlbumPage({ params }: { params: { album_id: string } }) {
+export default async function PortfolioAlbumPage({ params }: { params: Promise<{ album_id: string }> }) {
+  const { album_id } = await params;
+
   // First verify the album exists
   const albums = await getAlbumsByType("portfolio");
-  const album = albums.find((a) => a.id === params.album_id);
+  const album = albums.find((a) => a.id === album_id);
 
   if (!album) {
     notFound();
@@ -46,7 +47,7 @@ export default async function PortfolioAlbumPage({ params }: { params: { album_i
               >
                 <div className="aspect-square bg-black/5 border-b border-black/10 overflow-hidden flex items-center justify-center text-5xl relative">
                   {work.image_url ? (
-                    <Image src={work.image_url} alt="Portfolio item" fill className="object-cover" />
+                    <img src={work.image_url} alt="Portfolio item" className="w-full h-full object-cover" />
                   ) : (
                     <span>🎨</span>
                   )}

@@ -1,25 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import {
   getNewsList,
   getPortfolioList,
   getAlbumsByType,
-  createNews,
-  createPortfolio,
-  createAlbum,
-  deleteNews,
-  deletePortfolio,
-  deleteAlbum,
   uploadImageToStorage,
-  addNewsToAlbum,
-  addPortfolioToAlbum,
+  getEvents,
   type DbNews,
   type DbPortfolio,
   type DbAlbum,
+  type DbEvent,
 } from "@/lib/supabase-queries";
+import {
+  createNewsAction,
+  createPortfolioAction,
+  createAlbumAction,
+  addNewsToAlbumAction,
+  addPortfolioToAlbumAction,
+  deleteNewsAction,
+  deletePortfolioAction,
+  deleteAlbumAction,
+  createEventAction,
+  deleteEventAction,
+} from "@/lib/admin-actions";
 
 import { AdminImageCard } from "@/components/admin-image-card";
 
@@ -31,17 +36,39 @@ export default function AdminPage() {
   const [news, setNews] = useState<DbNews[]>([]);
   const [portfolio, setPortfolio] = useState<DbPortfolio[]>([]);
   const [albums, setAlbums] = useState<DbAlbum[]>([]);
+  const [events, setEvents] = useState<DbEvent[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Modal State
-  const [activeModal, setActiveModal] = useState<"news" | "portfolio" | null>(null);
+  // Album Modal State
+  const [activeModal, setActiveModal] = useState<"news" | "portfolio" | "album" | "event" | null>(null);
+  const [albumType, setAlbumType] = useState<"backnumber" | "portfolio">("portfolio");
   const [formData, setFormData] = useState({
     title: "",
     content: "",
     file: null as File | null,
     previewUrl: "",
     albumId: "",
+    parentId: "" as string,
+    location: "",
+    startTime: "",
+    endTime: "",
   });
+
+  const resetForm = () => {
+    setFormData({ title: "", content: "", file: null, previewUrl: "", albumId: "", parentId: "", location: "", startTime: "", endTime: "" });
+  };
+
+  const buildAlbumOptions = (type: "backnumber" | "portfolio", parentId: string | null = null, depth = 0): DbAlbum[] => {
+    return albums
+      .filter((album) => album.type === type && album.parent_id === parentId)
+      .flatMap((album) => [
+        { ...album, name_en: `${"— ".repeat(depth)}${album.name_en}` },
+        ...buildAlbumOptions(type, album.id, depth + 1),
+      ]);
+  };
+
+  const parentAlbumOptions = buildAlbumOptions(albumType);
+  const assignmentAlbumOptions = activeModal === "news" ? buildAlbumOptions("backnumber") : buildAlbumOptions("portfolio");
 
   useEffect(() => {
     fetch("/api/admin/session", { credentials: "include" })
@@ -54,15 +81,17 @@ export default function AdminPage() {
   }, []);
 
   const loadData = async () => {
-    const [n, p, a1, a2] = await Promise.all([
+    const [n, p, a1, a2, e] = await Promise.all([
       getNewsList(),
       getPortfolioList(),
       getAlbumsByType("portfolio"),
       getAlbumsByType("backnumber"),
+      getEvents(),
     ]);
     setNews(n);
     setPortfolio(p);
     setAlbums([...a1, ...a2]);
+    setEvents(e);
   };
 
   const login = async () => {
@@ -100,15 +129,15 @@ export default function AdminPage() {
   };
 
   const handlePost = async () => {
-    if (!formData.title || !formData.file) {
+    if (!formData.title || (!formData.file && activeModal !== "album")) {
       alert("Title and Image are required!");
       return;
     }
     setLoading(true);
     try {
       if (activeModal === "news") {
-        const image_url = await uploadImageToStorage("news-images", formData.file);
-        await createNews({
+        const image_url = await uploadImageToStorage("news-images", formData.file!);
+        const item = await createNewsAction({
           title_en: formData.title,
           title_ja: formData.title,
           body_en: formData.content,
@@ -116,9 +145,12 @@ export default function AdminPage() {
           image_url,
           published_at: new Date().toISOString(),
         });
+        if (formData.albumId) {
+          await addNewsToAlbumAction(formData.albumId, item.id);
+        }
       } else if (activeModal === "portfolio") {
-        const image_url = await uploadImageToStorage("portfolio-images", formData.file);
-        const p = await createPortfolio({
+        const image_url = await uploadImageToStorage("portfolio-images", formData.file!);
+        const p = await createPortfolioAction({
           title_en: formData.title,
           title_ja: formData.title,
           body_en: formData.content,
@@ -127,30 +159,43 @@ export default function AdminPage() {
           sort_order: portfolio.length,
         });
         if (formData.albumId) {
-          await addPortfolioToAlbum(formData.albumId, p.id);
+          await addPortfolioToAlbumAction(formData.albumId, p.id);
         }
+      } else if (activeModal === "album") {
+        let cover_image_url = null;
+        if (formData.file) {
+          const bucket = albumType === "backnumber" ? "bucknumber-covers" : "album-covers";
+          cover_image_url = await uploadImageToStorage(bucket, formData.file);
+        }
+        await createAlbumAction({
+          name_en: formData.title,
+          name_ja: formData.title,
+          description_en: formData.content,
+          description_ja: formData.content,
+          type: albumType,
+          parent_id: formData.parentId || null,
+          cover_image_url,
+          sort_order: albums.length,
+        });
+      } else if (activeModal === "event") {
+        await createEventAction({
+          title: formData.title,
+          description: formData.content,
+          location: formData.location,
+          start_time: formData.startTime,
+          end_time: formData.endTime || null,
+          is_all_day: false,
+          source: "manual",
+        });
       }
       await loadData();
       setActiveModal(null);
-      setFormData({ title: "", content: "", file: null, previewUrl: "", albumId: "" });
-      alert("Shared successfully!");
+      resetForm();
+      alert("Success!");
     } catch (err) {
       console.error(err);
-      alert("Failed to post.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddAlbum = async (type: "backnumber" | "portfolio") => {
-    const name_en = prompt(`Enter ${type} album name (English)?`);
-    if (!name_en) return;
-    setLoading(true);
-    try {
-      await createAlbum({ name_en, name_ja: name_en, type, sort_order: albums.length });
-      await loadData();
-    } catch (err) {
-      console.error(err);
+      const message = err instanceof Error ? err.message : "Failed to post.";
+      alert(`❌ エラー:\n${message}`);
     } finally {
       setLoading(false);
     }
@@ -159,7 +204,7 @@ export default function AdminPage() {
   const handleDeleteNews = async (id: string) => {
     if (!confirm("Delete this news?")) return;
     setLoading(true);
-    await deleteNews(id);
+    await deleteNewsAction(id);
     await loadData();
     setLoading(false);
   };
@@ -167,7 +212,15 @@ export default function AdminPage() {
   const handleDeletePortfolio = async (id: string) => {
     if (!confirm("Delete this portfolio item?")) return;
     setLoading(true);
-    await deletePortfolio(id);
+    await deletePortfolioAction(id);
+    await loadData();
+    setLoading(false);
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    if (!confirm("Delete this event?")) return;
+    setLoading(true);
+    await deleteEventAction(id);
     await loadData();
     setLoading(false);
   };
@@ -197,32 +250,48 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-white text-black pb-24">
       <SiteHeader />
-      <div className="container mx-auto px-4 py-10 max-w-6xl space-y-10">
+      <div className="container mx-auto px-4 py-10 max-w-6xl space-y-12">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-black">Admin Dashboard</h1>
+          <h1 className="text-3xl font-black">Dashboard</h1>
           <div className="flex gap-4">
             <button
-              onClick={() => setActiveModal("portfolio")}
-              className="px-6 py-2 bg-black text-white font-bold rounded-full hover:bg-black/80 transition"
+              onClick={() => {
+                resetForm();
+                setActiveModal("portfolio");
+              }}
+              className="px-6 py-2 bg-black text-white font-bold rounded-full hover:bg-black/80 transition shadow-sm"
             >
-              + Create Portfolio
+              + Post Portfolio
             </button>
             <button
-              onClick={() => setActiveModal("news")}
+              onClick={() => {
+                resetForm();
+                setActiveModal("news");
+              }}
               className="px-6 py-2 border-2 border-black font-bold rounded-full hover:bg-black/5 transition"
             >
-              + Create News
+              + Post News
+            </button>
+            <button
+              onClick={() => {
+                resetForm();
+                setActiveModal("event");
+              }}
+              className="px-6 py-2 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition shadow-sm"
+            >
+              + Post Event
             </button>
             <button onClick={logout} className="text-sm underline">Logout</button>
           </div>
         </div>
 
-        {loading && <div className="fixed top-0 left-0 w-full h-1 bg-blue-500 animate-pulse z-50"></div>}
+        {loading && <div className="fixed top-0 left-0 w-full h-1 bg-blue-500 animate-pulse z-[110]"></div>}
 
+        {/* Portfolio Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between border-b border-black/10 pb-4">
-            <h2 className="text-xl font-bold">Portfolio ({portfolio.length})</h2>
-            <button onClick={() => handleAddAlbum("portfolio")} className="text-sm font-bold underline">+ New Album</button>
+            <h2 className="text-xl font-bold">Portfolio</h2>
+            <button onClick={() => { resetForm(); setAlbumType("portfolio"); setActiveModal("album"); }} className="text-sm font-bold underline">+ New Album</button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {portfolio.map((p) => (
@@ -236,7 +305,7 @@ export default function AdminPage() {
                 onDelete={() => handleDeletePortfolio(p.id)}
                 onAssign={() => {
                   const aid = prompt("Album ID?");
-                  if (aid) addPortfolioToAlbum(aid, p.id).then(() => alert("Assigned!"));
+                  if (aid) addPortfolioToAlbumAction(aid, p.id).then(() => alert("Assigned!"));
                 }}
                 onCopyEmbed={() => {
                   navigator.clipboard.writeText(`[portfolio:${p.id}]`);
@@ -247,10 +316,11 @@ export default function AdminPage() {
           </div>
         </section>
 
+        {/* News Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between border-b border-black/10 pb-4">
-            <h2 className="text-xl font-bold">News ({news.length})</h2>
-            <button onClick={() => handleAddAlbum("backnumber")} className="text-sm font-bold underline">+ New Backnumber</button>
+            <h2 className="text-xl font-bold">News</h2>
+            <button onClick={() => { resetForm(); setAlbumType("backnumber"); setActiveModal("album"); }} className="text-sm font-bold underline">+ New Backnumber</button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {news.map((n) => (
@@ -264,7 +334,7 @@ export default function AdminPage() {
                 onDelete={() => handleDeleteNews(n.id)}
                 onAssign={() => {
                   const aid = prompt("Album ID?");
-                  if (aid) addNewsToAlbum(aid, n.id).then(() => alert("Assigned!"));
+                  if (aid) addNewsToAlbumAction(aid, n.id).then(() => alert("Assigned!"));
                 }}
                 onCopyEmbed={() => {
                   navigator.clipboard.writeText(`[news:${n.id}]`);
@@ -275,52 +345,109 @@ export default function AdminPage() {
           </div>
         </section>
 
+        {/* Albums Section (Hierarchical Display) */}
         <section className="space-y-6">
-          <div className="flex items-center justify-between border-b border-black/10 pb-4">
-            <h2 className="text-xl font-bold">Albums ({albums.length})</h2>
+          <div className="border-b border-black/10 pb-4">
+            <h2 className="text-xl font-bold">Albums & Backnumbers</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {albums.map((a) => (
-              <div key={a.id} className="p-4 border border-black/10 rounded-lg flex items-center justify-between bg-white shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Portfolio Albums */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Portfolio Albums</h3>
+              <div className="space-y-2">
+                {albums.filter(a => a.type === "portfolio" && !a.parent_id).map(parent => (
+                  <div key={parent.id} className="space-y-2">
+                    <AlbumListItem album={parent} onDelete={() => deleteAlbumAction(parent.id).then(loadData)} />
+                    {albums.filter(child => child.parent_id === parent.id).map(child => (
+                      <div key={child.id} className="ml-8 border-l-2 border-black/5 pl-4">
+                        <AlbumListItem album={child} onDelete={() => deleteAlbumAction(child.id).then(loadData)} isChild />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Backnumbers */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Backnumbers</h3>
+              <div className="space-y-2">
+                {albums.filter(a => a.type === "backnumber" && !a.parent_id).map(parent => (
+                  <div key={parent.id} className="space-y-2">
+                    <AlbumListItem album={parent} onDelete={() => deleteAlbumAction(parent.id).then(loadData)} />
+                    {albums.filter(child => child.parent_id === parent.id).map(child => (
+                      <div key={child.id} className="ml-8 border-l-2 border-black/5 pl-4">
+                        <AlbumListItem album={child} onDelete={() => deleteAlbumAction(child.id).then(loadData)} isChild />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Events Section */}
+        <section className="space-y-6">
+          <div className="border-b border-black/10 pb-4">
+            <h2 className="text-xl font-bold">Upcoming Events (Manual)</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {events.filter(e => e.source === "manual").map((e) => (
+              <div key={e.id} className="p-4 border border-black/10 rounded-2xl bg-white flex justify-between items-center group">
                 <div>
-                  <p className="text-[10px] font-mono text-gray-400">{a.id}</p>
-                  <p className="font-bold">{a.name_en}</p>
-                  <span className="text-[10px] uppercase bg-black/5 px-1.5 py-0.5 rounded">{a.type}</span>
+                  <p className="text-[10px] font-black text-gray-400 mb-1">
+                    {new Date(e.start_time).toLocaleString()}
+                  </p>
+                  <h3 className="font-bold">{e.title}</h3>
+                  {e.location && <p className="text-xs text-gray-400">📍 {e.location}</p>}
                 </div>
-                <button onClick={() => {
-                  if (confirm("Delete?")) deleteAlbum(a.id).then(() => loadData());
-                }} className="text-red-500 text-xs hover:underline">Delete</button>
+                <button onClick={() => handleDeleteEvent(e.id)} className="text-red-500 text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">Delete</button>
               </div>
             ))}
+            {events.filter(e => e.source === "manual").length === 0 && (
+              <p className="text-sm text-gray-400">No manual events created.</p>
+            )}
           </div>
         </section>
       </div>
 
-      {/* Instagram-style Creation Modal */}
+      {/* Shared Creation Modal (Instagram-style) */}
       {activeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-10">
-          <div className="bg-white w-full max-w-4xl h-full max-h-[600px] rounded-xl overflow-hidden flex flex-col">
-            <div className="h-12 border-b border-black/10 flex items-center justify-between px-4 shrink-0">
-              <button onClick={() => setActiveModal(null)} className="font-bold text-sm">Cancel</button>
-              <h3 className="font-bold">Create New {activeModal === "news" ? "News" : "Post"}</h3>
+          <div className="bg-white w-full max-w-5xl h-full max-h-[720px] rounded-[28px] overflow-hidden flex flex-col shadow-2xl">
+            <div className="h-14 border-b border-black/10 flex items-center justify-between px-6 shrink-0">
+              <button onClick={() => { setActiveModal(null); resetForm(); }} className="text-sm font-bold text-gray-400 hover:text-black">Cancel</button>
+              <div className="text-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-gray-400">
+                  {activeModal === "album" ? "Collection Setup" : "Publisher"}
+                </p>
+                <h3 className="font-black text-lg">
+                  {activeModal === "album" ? `New ${albumType === "backnumber" ? "Backnumber" : "Album"}` : `New ${activeModal === "news" ? "News" : "Post"}`}
+                </h3>
+              </div>
               <button
                 onClick={handlePost}
                 disabled={loading}
-                className="text-blue-500 font-bold text-sm disabled:opacity-30"
+                className="text-blue-500 font-black text-sm disabled:opacity-30"
               >
-                {loading ? "Posting..." : "Share"}
+                {loading ? "Processing..." : (activeModal === "album" ? "Create" : "Share")}
               </button>
             </div>
             
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-              {/* Left Column: Image Preview */}
-              <div className="flex-1 bg-black/5 flex flex-col items-center justify-center relative group min-h-[300px]">
+              {/* Left Column: Image Preview / Upload */}
+              <div className="flex-1 bg-[#f6f4ef] flex flex-col items-center justify-center relative group min-h-[320px] border-r border-black/5">
                 {formData.previewUrl ? (
                   <img src={formData.previewUrl} className="w-full h-full object-contain" alt="Preview" />
                 ) : (
-                  <div className="text-center p-10">
-                    <div className="text-6xl mb-4">🖼️</div>
-                    <p className="text-sm font-bold text-gray-500 mb-4">Drag photos and videos here</p>
+                  <div className="text-center p-10 max-w-sm">
+                    <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center text-4xl mb-6 shadow-sm">🖼️</div>
+                    <p className="text-sm font-bold text-gray-800 mb-2">Upload Thumbnail</p>
+                    <p className="text-xs text-gray-500 mb-6 leading-relaxed">
+                      {activeModal === "album"
+                        ? "Choose a cover that makes this collection immediately recognizable."
+                        : "Drop in the hero image first so the preview and card layouts are easy to judge."}
+                    </p>
                     <input
                       type="file"
                       accept="image/*"
@@ -330,68 +457,160 @@ export default function AdminPage() {
                     />
                     <label
                       htmlFor="modal-file-input"
-                      className="px-4 py-2 bg-blue-500 text-white text-sm font-bold rounded-lg cursor-pointer hover:bg-blue-600"
+                      className="px-6 py-2.5 bg-black text-white text-xs font-black rounded-lg cursor-pointer hover:bg-black/80 transition"
                     >
-                      Select from computer
+                      Choose from Computer
                     </label>
                   </div>
                 )}
                 {formData.previewUrl && (
                   <button
                     onClick={() => setFormData({ ...formData, file: null, previewUrl: "" })}
-                    className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-4 right-4 bg-black/60 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     ✕
                   </button>
                 )}
               </div>
 
-              {/* Right Column: Metadata */}
-              <div className="w-full md:w-[350px] border-l border-black/10 flex flex-col bg-white overflow-y-auto">
-                <div className="p-4 space-y-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center text-xs">RT</div>
-                    <span className="font-bold text-sm">rt18_formula1</span>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      placeholder="Enter title..."
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full text-sm font-bold focus:outline-none border-b border-black/5 pb-2"
-                    />
-                    <textarea
-                      placeholder="Write a caption..."
-                      rows={8}
-                      value={formData.content}
-                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                      className="w-full text-sm resize-none focus:outline-none"
-                    />
+              {/* Right Column: Metadata Fields */}
+              <div className="w-full md:w-[420px] flex flex-col bg-white overflow-y-auto">
+                <div className="p-6 space-y-8">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-2xl bg-black/[0.03] p-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-gray-400 mb-2">Type</p>
+                      <p className="text-sm font-black capitalize">{activeModal === "album" ? albumType : activeModal}</p>
+                    </div>
+                    <div className="rounded-2xl bg-black/[0.03] p-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-gray-400 mb-2">Title</p>
+                      <p className="text-sm font-black">{formData.title.length}/80</p>
+                    </div>
+                    <div className="rounded-2xl bg-black/[0.03] p-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-gray-400 mb-2">Body</p>
+                      <p className="text-sm font-black">{formData.content.length} chars</p>
+                    </div>
                   </div>
 
-                  {activeModal === "portfolio" && (
-                    <div className="pt-4 border-t border-black/10">
-                      <label className="block text-xs font-bold text-gray-400 mb-2 uppercase">Add to Album</label>
+                  {activeModal === "album" && (
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Parent Album (Optional)</label>
                       <select
-                        value={formData.albumId}
-                        onChange={(e) => setFormData({ ...formData, albumId: e.target.value })}
-                        className="w-full text-sm bg-transparent focus:outline-none font-semibold"
+                        value={formData.parentId}
+                        onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}
+                        className="w-full p-3 bg-black/5 rounded-xl text-sm font-bold appearance-none focus:outline-none focus:ring-2 ring-black/5"
                       >
-                        <option value="">None (Standalone)</option>
-                        {albums.filter(a => a.type === "portfolio").map(a => (
+                        <option value="">No parent (Root album)</option>
+                        {parentAlbumOptions.map((a) => (
                           <option key={a.id} value={a.id}>{a.name_en}</option>
                         ))}
                       </select>
                     </div>
                   )}
+
+                  <div className="space-y-6">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Title</label>
+                      <input
+                        type="text"
+                        placeholder="Enter title..."
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        className="w-full text-lg font-bold focus:outline-none border-b-2 border-black/5 pb-2 transition-colors focus:border-black"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Description</label>
+                      <textarea
+                        placeholder="Write a description..."
+                        rows={6}
+                        value={formData.content}
+                        onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                        className="w-full text-sm resize-none focus:outline-none leading-relaxed"
+                      />
+                    </div>
+                  </div>
+
+                  {activeModal === "event" && (
+                    <div className="space-y-4 pt-4 border-t border-black/5">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Start Time</label>
+                        <input
+                          type="datetime-local"
+                          value={formData.startTime}
+                          onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                          className="w-full p-3 bg-black/5 rounded-xl text-sm font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Location</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Suzuka Circuit, Online, etc."
+                          value={formData.location}
+                          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                          className="w-full p-3 bg-black/5 rounded-xl text-sm font-bold"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {(activeModal === "portfolio" || activeModal === "news") && (
+                    <div className="pt-6 border-t border-black/5">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">
+                        {activeModal === "news" ? "Assign to Backnumber" : "Add to Album"}
+                      </label>
+                      <select
+                        value={formData.albumId}
+                        onChange={(e) => setFormData({ ...formData, albumId: e.target.value })}
+                        className="w-full p-3 bg-black/5 rounded-xl text-sm font-bold appearance-none focus:outline-none focus:ring-2 ring-black/5"
+                      >
+                        <option value="">
+                          {activeModal === "news" ? "None (Standalone article)" : "None (Standalone work)"}
+                        </option>
+                        {assignmentAlbumOptions.map((a) => (
+                          <option key={a.id} value={a.id}>{a.name_en}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="rounded-2xl border border-black/10 bg-[#fbfaf7] p-4 space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-gray-400">Preview Notes</p>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {activeModal === "news"
+                        ? "News cards read best with a strong thumbnail, a short title, and the correct Backnumber selected before publishing."
+                        : activeModal === "portfolio"
+                          ? "Portfolio posts feel stronger when the cover image is clean and the album assignment already matches the collection structure."
+                          : "Nested collections are easiest to scan when parent albums stay broad and child albums stay specific."}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function AlbumListItem({ album, onDelete, isChild }: { album: DbAlbum, onDelete: () => void, isChild?: boolean }) {
+  return (
+    <div className={`p-3 border border-black/10 rounded-xl flex items-center justify-between bg-white shadow-sm hover:shadow-md transition-shadow ${isChild ? 'bg-gray-50' : ''}`}>
+      <div className="flex items-center gap-3 overflow-hidden">
+        <div className="w-10 h-10 shrink-0 bg-black/5 rounded-lg overflow-hidden relative border border-black/5">
+          {album.cover_image_url ? (
+            <img src={album.cover_image_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-xs">📁</div>
+          )}
+        </div>
+        <div className="min-w-0">
+          <p className="text-[9px] font-mono text-gray-400 truncate">{album.id}</p>
+          <p className="font-black text-sm truncate">{album.name_en}</p>
+        </div>
+      </div>
+      <button onClick={(e) => { e.stopPropagation(); if (confirm("Delete?")) onDelete(); }} className="text-red-500 text-xs font-bold hover:underline ml-4">Delete</button>
     </div>
   );
 }

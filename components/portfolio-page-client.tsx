@@ -3,127 +3,144 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { useLanguage } from "@/components/providers/language-provider";
 import type { DbPortfolio, DbAlbum } from "@/lib/supabase-queries";
-import Image from "next/image";
 
 type Crumb = { id: string | null; title: string };
-type Relation = { parent_id: string; child_id: string; sort_order: number };
 
 export default function PortfolioPageClient({
   portfolio,
   albums,
-  relations,
+  mapping = [],
 }: {
   portfolio: DbPortfolio[];
   albums: DbAlbum[];
-  relations: Relation[];
+  mapping?: { portfolio_id: string; album_id: string }[];
 }) {
   const { language } = useLanguage();
 
-  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([{ id: null, title: language === "ja" ? "ホーム" : "Home" }]);
+  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([
+    { id: null, title: language === "ja" ? "ホーム" : "Home" }
+  ]);
+  
   const currentAlbumId = breadcrumbs[breadcrumbs.length - 1]?.id ?? null;
 
-  const childAlbums = useMemo(() => {
+  const currentLevelAlbums = useMemo(() => {
+    return albums.filter(a => a.type === "portfolio" && a.parent_id === currentAlbumId);
+  }, [albums, currentAlbumId]);
+
+  const currentLevelWorks = useMemo(() => {
     if (currentAlbumId === null) {
-      // Find root albums (those that are never a child in relations)
-      const childIds = new Set(relations.map((r) => r.child_id));
-      return albums.filter((a) => !childIds.has(a.id));
-    } else {
-      // Find children of currentAlbumId
-      const childIds = new Set(relations.filter((r) => r.parent_id === currentAlbumId).map((r) => r.child_id));
-      return albums.filter((a) => childIds.has(a.id));
+      const inAlbumIds = new Set(mapping.map(m => m.portfolio_id));
+      return portfolio.filter(p => !inAlbumIds.has(p.id));
     }
-  }, [albums, relations, currentAlbumId]);
+    const itemIds = new Set(mapping.filter(m => m.album_id === currentAlbumId).map(m => m.portfolio_id));
+    return portfolio.filter(p => itemIds.has(p.id));
+  }, [portfolio, currentAlbumId, mapping]);
 
   const title = language === "ja" ? "ポートフォリオ" : "Portfolio";
 
   return (
-    <div className="min-h-screen bg-white text-black">
+    <div className="min-h-screen bg-white text-black flex flex-col">
       <SiteHeader />
-
-      <div className="border-b border-black/10 sticky top-[73px] bg-white z-40">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <h1 className="text-3xl font-bold mb-4">{title}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            {breadcrumbs.map((item, index) => (
-              <div key={`${item.id}-${index}`} className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="hover:underline"
-                  onClick={() => setBreadcrumbs(breadcrumbs.slice(0, index + 1))}
-                >
-                  {item.title}
-                </button>
-                {index < breadcrumbs.length - 1 ? <span className="text-black/40">›</span> : null}
-              </div>
-            ))}
+      
+      <div className="flex-1">
+        <header className="bg-white border-b border-black/10 py-16 px-4">
+          <div className="max-w-6xl mx-auto">
+            <h1 className="text-6xl font-black mb-8 tracking-tighter">{title}</h1>
+            
+            <nav className="flex items-center gap-3 text-sm font-black uppercase tracking-widest text-gray-400">
+              {breadcrumbs.map((crumb, idx) => (
+                <div key={crumb.id || 'root'} className="flex items-center gap-3">
+                  <button 
+                    onClick={() => setBreadcrumbs(breadcrumbs.slice(0, idx + 1))}
+                    className={`hover:text-black transition-colors ${idx === breadcrumbs.length - 1 ? 'text-black border-b-2 border-black' : ''}`}
+                  >
+                    {crumb.title}
+                  </button>
+                  {idx < breadcrumbs.length - 1 && <span className="opacity-30">/</span>}
+                </div>
+              ))}
+            </nav>
           </div>
-        </div>
-      </div>
+        </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {childAlbums.length > 0 ? (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">{language === "ja" ? "アルバム" : "Albums"}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {childAlbums.map((album) => (
-                <Link
-                  key={album.id}
-                  href={`/albums/${album.id}`}
-                  className="text-left border border-black/10 rounded-lg overflow-hidden hover:shadow-lg transition-shadow block bg-white"
-                >
-                  <div className="aspect-square bg-black/5 border-b border-black/10 flex items-center justify-center text-4xl relative overflow-hidden">
-                    {album.cover_image_url ? (
-                      <Image src={album.cover_image_url} alt="Album cover" fill className="object-cover" />
-                    ) : (
-                      <span>📁</span>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg mb-2 line-clamp-2">
-                      {language === "ja" ? album.name_ja || album.name_en : album.name_en}
-                    </h3>
-                    {album.description_en || album.description_ja ? (
-                      <p className="text-sm line-clamp-2 text-gray-600">
+        <main className="max-w-6xl mx-auto px-4 py-16">
+          {currentLevelAlbums.length > 0 && (
+            <div className="mb-20">
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-10">Collections</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                {currentLevelAlbums.map((album) => (
+                  <button
+                    key={album.id}
+                    onClick={() => setBreadcrumbs([...breadcrumbs, { id: album.id, title: language === "ja" ? album.name_ja || album.name_en : album.name_en }])}
+                    className="group text-left border border-black/10 rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                  >
+                    <div className="aspect-square bg-black/5 relative overflow-hidden">
+                      {album.cover_image_url ? (
+                        <img 
+                          src={album.cover_image_url} 
+                          alt="" 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-5xl">📁</div>
+                      )}
+                      <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="bg-white px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">Explore</span>
+                      </div>
+                    </div>
+                    <div className="p-8">
+                      <h3 className="font-black text-2xl mb-2">{language === "ja" ? album.name_ja || album.name_en : album.name_en}</h3>
+                      <p className="text-sm text-gray-500 font-medium leading-relaxed line-clamp-2">
                         {language === "ja" ? album.description_ja || album.description_en : album.description_en}
                       </p>
-                    ) : null}
-                  </div>
-                </Link>
-              ))}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : null}
+          )}
 
-        <div>
-          <h2 className="text-2xl font-bold mb-6">
-            {currentAlbumId ? (language === "ja" ? "このアルバムの作品" : "Works in this album") : language === "ja" ? "全ての作品" : "All works"}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {portfolio.map((work) => (
-              <Link
-                key={work.id}
-                href={`/portfolio/${work.id}`}
-                className="border border-black/10 rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white"
-              >
-                <div className="aspect-square bg-black/5 border-b border-black/10 overflow-hidden flex items-center justify-center text-5xl relative">
-                  {work.image_url ? (
-                    <Image src={work.image_url} alt="Portfolio item" fill className="object-cover" />
-                  ) : (
-                    <span>🎨</span>
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3 className="font-bold text-lg mb-2 line-clamp-2">
-                    {language === "ja" ? work.title_ja || work.title_en : work.title_en}
-                  </h3>
-                </div>
-              </Link>
-            ))}
+          <div>
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-10">
+              {currentAlbumId ? "Works in this collection" : "All Works"}
+            </h2>
+            {currentLevelWorks.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                {currentLevelWorks.map((work) => (
+                  <Link
+                    key={work.id}
+                    href={`/portfolio/${work.id}`}
+                    className="group border border-black/10 rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                  >
+                    <div className="aspect-square bg-black/5 relative overflow-hidden">
+                      {work.image_url ? (
+                        <img 
+                          src={work.image_url} 
+                          alt="" 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-5xl">🎨</div>
+                      )}
+                    </div>
+                    <div className="p-8">
+                      <h3 className="font-black text-xl group-hover:text-blue-600 transition-colors">
+                        {language === "ja" ? work.title_ja || work.title_en : work.title_en}
+                      </h3>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-400 font-bold italic">No works found in this collection.</p>
+            )}
           </div>
-        </div>
+        </main>
       </div>
+      <SiteFooter />
     </div>
   );
 }

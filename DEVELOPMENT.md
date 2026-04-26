@@ -1,186 +1,58 @@
-# rt18_formula1 サイト開発セッションまとめ
-作成日: 2026-04-23
-
----
-
-## 現状
+## 現状 (2026-04-25 更新)
 
 - **サイトURL**: https://rt18-formula1-official-site.vercel.app
-- **構成**: React製、Vercel deploy、GitHubと連携済み
-- **DBなし**: 現時点では全データがlocalStorageで動いている
-- **Supabase**: プロジェクト作成済み、Cursor連携済み
-- **Cursor**: Free Plan、クレジット一時枯渇中（月次リセット待ち）
+- **DB**: Supabase (PostgreSQL) 実装完了
+- **ストレージ**: Cloudflare R2 実装完了 (Supabase Storage から移行)
+- **認証**: Admin 認証 (Cookieベース) 実装完了
+- **PWA**: 対応完了 (ホーム画面追加可能)
 
 ---
 
-## 完了済み
+## 完了済み (直近の作業)
 
-- 文字色を黒基調に統一
-- SNSアイコン下のリンクグリッド復活（note/Shop/Wishlist等）
-- 日本語/英語切替（localStorageに保存）
-- ヘッダーアイコン差し替え（rt18_formula1-icon.png）
-- フッターの「Created by Manus」削除
-- Admin管理画面の骨格追加
-- `RT18_ADMIN_PASSWORD` をVercel環境変数に設定済み
+### 1. システム・基盤
+- **ビルドエラー解消**: Supabase 環境変数が欠けている環境でもビルドが通るようガードを実装。
+- **PWA化**: `manifest.ts` の作成と `appleWebApp` メタタグの設定。iOS/Android でアプリのように動作。
+- **ストレージ移行**: 画像保存先を Supabase Storage から Cloudflare R2 に変更（パフォーマンスとコスト最適化）。
+- **シェア機能刷新**: X (Twitter)、リンクコピー、OSネイティブシェアを統合。Instagram ストーリーズは検討の末削除。
 
-## 未解決・残タスク
-
-| 課題 | 状態 |
-|---|---|
-| ファビコン差し替え | プレースホルダーで対応済み（本番用は後日） |
-| DB接続・実装 | Supabase準備済み |
-| 画像がプレースホルダー | ManusのストレージURL死んでいる → Supabase Storageに移行で解決 |
-
----
-
-## DB設計（確定）
-
-### 方針
-- **Supabase**（PostgreSQL + Storage）を使う
-- 画像の実体はSupabase Storageに置き、DBにはURLのみ保持
-- 日英カラムは最初から分離（`title_ja` / `title_en`）
-- `body` は `jsonb` でPortfolio埋め込みブロックに対応
+### 2. UI/UX 改善
+- **ヘッダー**: News 詳細ページでもヘッダーを固定表示。
+- **デザイン**: 
+  - セクション名の下の二重線を削除（シンプル化）。
+  - セクション間の余白（前セクションの境界線と次セクションのタイトル間）を短縮。
+- **Portfolio グリッド**:
+  - 6列から3列に変更し、画像を大型化。
+  - 画像下のタイトル・テキスト表示を追加。
+- **管理画面**:
+  - 投稿エラー（HTTP 413 等）の可視化。
+  - 画像アップロード失敗時に投稿をブロックするガード実装。
 
 ---
 
-### テーブル構成
+## 現在の課題と解決方針
 
-#### `news`
-```sql
-create table news (
-  id uuid default gen_random_uuid() primary key,
-  title_en text not null,
-  title_ja text,
-  body_en jsonb,
-  body_ja jsonb,
-  image_url text,
-  published_at date not null,
-  created_at timestamp default now()
-);
-```
+### 課題: 画像アップロードの 4.5MB 制限 (HTTP 413)
+- **原因**: Vercel の API Route（サーバーレス関数）には 4.5MB のペイロード制限がある。高画質な画像を送ると Vercel 側で遮断される。
+- **解決策**: **署名付きURL (Presigned URL)** 方式への切り替え。
+  - Vercel は「アップロード権限」のみを発行し、ブラウザが直接 Cloudflare R2 へ大容量ファイルを送信する。
 
-#### `portfolio`
-```sql
-create table portfolio (
-  id uuid default gen_random_uuid() primary key,
-  title_en text not null,
-  title_ja text,
-  body_en text,
-  body_ja text,
-  image_url text,
-  sort_order int default 0,
-  created_at timestamp default now()
-);
-```
+### 2026-04-26 追記: HTTP 413 対応の実装ログ
+- `/api/admin/upload` を「ファイル受信API」から「署名URL発行API」へ変更。
+- `lib/supabase-queries.ts` の `uploadImageToStorage()` を、`/api/admin/upload` で取得した `uploadUrl` に対してブラウザから `PUT` する実装に変更。
+- `lib/r2.ts` を `getPresignedUrl()` + `buildR2ObjectKey()` 中心へ整理し、サーバーがファイル本体を受けない設計へ移行。
+- `.env.example` に R2 必須環境変数 (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`) を追記。
+- これにより、Vercel 経由アップロードで発生していた 413 を構造的に回避。
 
-#### `albums`
-```sql
-create table albums (
-  id uuid default gen_random_uuid() primary key,
-  name_en text not null,
-  name_ja text,
-  description_en text,
-  description_ja text,
-  cover_image_url text,
-  type text check (type in ('backnumber', 'portfolio')),
-  tags text[],
-  sort_order int default 0,
-  created_at timestamp default now()
-);
-```
-
-#### `album_relations`（アルバム同士の親子・多対多・無限ネスト）
-```sql
-create table album_relations (
-  parent_id uuid references albums(id) on delete cascade,
-  child_id uuid references albums(id) on delete cascade,
-  sort_order int default 0,
-  primary key (parent_id, child_id)
-);
-```
-
-#### `album_news`（NewsとAlbumsの中間テーブル）
-```sql
-create table album_news (
-  album_id uuid references albums(id) on delete cascade,
-  news_id uuid references news(id) on delete cascade,
-  sort_order int default 0,
-  primary key (album_id, news_id)
-);
-```
-
-#### `album_portfolio`（PortfolioとAlbumsの中間テーブル）
-```sql
-create table album_portfolio (
-  album_id uuid references albums(id) on delete cascade,
-  portfolio_id uuid references portfolio(id) on delete cascade,
-  sort_order int default 0,
-  primary key (album_id, portfolio_id)
-);
-```
-
----
-
-### Supabase Storage バケット
-
-| バケット名 | 用途 |
-|---|---|
-| `news-images` | News記事の画像 |
-| `portfolio-images` | Portfolio作品画像 |
-
-## 画像の仕組み
-- 画像の実体はSupabase Storageに保存する
-- StorageバケットはDBとは別物だが同じSupabaseプロジェクト内で管理
-- Admin画面から画像をアップロード → Supabase Storageに保存される
-- そのパブリックURLをDBのimage_urlカラムに文字列として保存
-- フロント側はimage_urlを読んで<img>タグで表示する
-- バケット構成:
-  - news-images（News記事の画像）
-  - portfolio-images（Portfolio作品画像）
-
----
-
-## ページ構造（作るもの）
-
-```
-/news
-├── /news/[id]（個別記事）
-└── /backnumber
-    └── /backnumber/[album_id]（号まとめ）
-
-/portfolio
-└── /albums
-    └── /albums/[album_id]（作品まとめ）
-```
-
-- URLは `/albums/[id]` で統一も検討
-- パンくずは直前に辿ってきたパスを表示
-- 同じ親を持つ兄弟アルバムを「おすすめ」としてサジェスト表示
-- BacknumberとPortfolioには壁を設ける（混在NG）
-- ただし記事の中にPortfolio作品を埋め込むのはOK
-
----
-
-## アルバム設計の思想
-
-- アルバムが**タグ・カテゴリ・レコメンドエンジンを兼ねる**構造
-- 同じ親を持つ兄弟アルバムが自動でサジェストに出る
-- パンくず（直前パス）＋サジェスト（兄弟アルバム）の二層構造
-
----
-
-## 将来フェーズ（今回は対象外）
-
-- **ショップ機能**: ファンブック（デジタル）＋ファングッズ（物理）をStripe決済で販売
-- 物理グッズがあるため: 配送先住所・在庫管理・発送ステータスが必要
-- portfolioとショップは完全に別ライン（絵は販売しない）
-- Phase 3として別途設計予定
+### 課題: Cloudflare R2 の公開URL制限
+- **現状**: `pub-*.r2.dev` ドメインを使用中だが、レートリミットがあり本番には非推奨。
+- **解決策**: カスタムドメイン（例: `media.rt18-formula1.com`）を Cloudflare 上で設定する。
 
 ---
 
 ## 次にやること
 
-1. Supabaseにテーブルを作成（上記SQLを流す）
-2. StorageバケットにNews/Portfolio画像をアップ
-3. News・Portfolio・AlbumsのCRUD実装
-4. Backnumber・Albumsページのルーティング実装
+1. **署名付きURLの実装完了**: ブラウザ側から直接 R2 へ PUT 送信するロジックの完成。
+2. **問い合わせフォームの疎通**: Contact セクションに実際の送信ロジック（Resend 等）を統合。
+3. **カレンダー機能の強化**: Google Calendar API 連携や iCal 書き出しの最適化。
+4. **SEO/OGP 強化**: SNS シェア時のプレビュー画像の動的生成。

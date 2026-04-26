@@ -1,29 +1,38 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { useLanguage } from "@/components/providers/language-provider";
 import type { DbNews, DbPortfolio } from "@/lib/supabase-queries";
+import { ShareButtons } from "@/components/share-buttons";
 
 export default function NewsDetailClient({ 
   newsItem, 
-  embeddedPortfolio = [] 
+  embeddedPortfolio = [],
+  prev,
+  next
 }: { 
   newsItem: DbNews;
   embeddedPortfolio?: DbPortfolio[];
+  prev?: { id: string; title_en: string } | null;
+  next?: { id: string; title_en: string } | null;
 }) {
   const { language } = useLanguage();
 
   if (!newsItem) {
     return (
-      <div className="min-h-screen bg-white text-black flex items-center justify-center px-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">News not found</h1>
-          <Link href="/news" className="underline">
-            Back to News
-          </Link>
+      <div className="min-h-screen bg-white text-black flex flex-col">
+        <SiteHeader />
+        <div className="flex-1 flex items-center justify-center px-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">News not found</h1>
+            <Link href="/news" className="underline">
+              Back to News
+            </Link>
+          </div>
         </div>
+        <SiteFooter />
       </div>
     );
   }
@@ -62,23 +71,55 @@ export default function NewsDetailClient({
   };
 
   return (
-    <div className="min-h-screen bg-white text-black">
+    <div className="min-h-screen bg-white text-black flex flex-col">
       <SiteHeader />
-      <article className="max-w-3xl mx-auto px-4 py-12">
-        <header className="mb-8 border-b border-black/10 pb-8">
-          <p className="text-sm text-gray-500 mb-4">{newsItem.published_at.split("T")[0]}</p>
-          <h1 className="text-4xl md:text-5xl font-black mb-6 leading-tight">{title}</h1>
-          {newsItem.image_url && (
-            <div className="aspect-video relative rounded-2xl overflow-hidden bg-black/5 border border-black/10">
-              <img src={newsItem.image_url} alt={title} className="w-full h-full object-cover" />
-            </div>
-          )}
-        </header>
+      <main className="flex-1">
+        <article className="max-w-3xl mx-auto px-4 py-12">
+          <header className="mb-12 border-b border-black/10 pb-8">
+            <Link href="/news" className="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-black transition-colors flex items-center gap-2 group mb-8">
+              <span className="group-hover:-translate-x-1 transition-transform">←</span> Back to News
+            </Link>
+            <p className="text-sm font-bold text-gray-400 mb-4">{newsItem.published_at.split("T")[0]}</p>
+            <h1 className="text-4xl md:text-5xl font-black mb-8 tracking-tighter leading-tight">{title}</h1>
+            {newsItem.image_url && (
+              <div className="aspect-video relative rounded-3xl overflow-hidden bg-black/5 border border-black/10 shadow-xl">
+                <img src={newsItem.image_url} alt={title} className="w-full h-full object-cover" />
+              </div>
+            )}
+          </header>
 
-        <div className="prose prose-lg max-w-none text-black leading-relaxed">
-          {renderBody(body)}
-        </div>
-      </article>
+          <div className="prose prose-xl max-w-none text-black leading-relaxed font-medium mb-12">
+            {renderBody(body)}
+          </div>
+
+          {/* Share Section */}
+          <ShareButtons title={title} />
+
+          {/* Navigation */}
+          <div className="border-t border-black/10 pt-12 flex flex-col md:flex-row gap-8 justify-between items-center mb-12">
+            {prev ? (
+              <Link href={`/news/${prev.id}`} className="group flex-1 flex items-center gap-4 text-left w-full">
+                <div className="text-4xl font-light text-gray-300 group-hover:text-black transition-colors">←</div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Previous Story</p>
+                  <p className="font-bold line-clamp-1">{prev.title_en}</p>
+                </div>
+              </Link>
+            ) : <div className="flex-1" />}
+
+            {next ? (
+              <Link href={`/news/${next.id}`} className="group flex-1 flex items-center gap-4 text-right justify-end w-full">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Next Story</p>
+                  <p className="font-bold line-clamp-1">{next.title_en}</p>
+                </div>
+                <div className="text-4xl font-light text-gray-300 group-hover:text-black transition-colors">→</div>
+              </Link>
+            ) : <div className="flex-1" />}
+          </div>
+        </article>
+      </main>
+      <SiteFooter />
     </div>
   );
 }

@@ -1,7 +1,5 @@
 "use client";
 
-import Image from "next/image";
-
 interface AdminImageCardProps {
   id: string;
   title: string;
@@ -15,7 +13,7 @@ interface AdminImageCardProps {
 
 export function AdminImageCard({ id, title, imageUrl, date, onDelete, onAssign, onCopyEmbed, type }: AdminImageCardProps) {
   return (
-    <div className="bg-white border border-black/10 rounded-lg overflow-hidden group hover:shadow-md transition-shadow">
+    <div data-item-id={id} className="bg-white border border-black/10 rounded-lg overflow-hidden group hover:shadow-md transition-shadow">
       <div className="aspect-square bg-black/5 relative overflow-hidden flex items-center justify-center text-4xl">
         {imageUrl ? (
           <img src={imageUrl} alt={title} className="w-full h-full object-cover" />

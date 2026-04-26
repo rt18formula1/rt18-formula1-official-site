@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>R2 Upload Test</title>
+</head>
+<body>
+    <h1>R2 Direct Upload Test</h1>
+    <input type="file" id="fileInput" accept="image/*">
+    <button onclick="testUpload()">Test Upload</button>
+    <div id="result"></div>
+
+    <script>
+        async function testUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Uploading...';
+
+            try {
+                // Step 1: Get presigned URL
+                const signResponse = await fetch('/api/test-upload', {
+                    method: 'POST',
+                    headers: {
+                        'content-type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        bucket: 'news-images',
+                        fileName: file.name,
+                        contentType: file.type || 'application/octet-stream',
+                    }),
+                });
+
+                if (!signResponse.ok) {
+                    const error = await signResponse.json();
+                    throw new Error(`Failed to get presigned URL: ${error.error}`);
+                }
+
+                const signed = await signResponse.json();
+                console.log('Presigned URL:', signed);
+
+                // Step 2: Upload directly to R2
+                const uploadResponse = await fetch(signed.uploadUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': file.type || 'application/octet-stream',
+                    },
+                    body: file,
+                });
+
+                if (!uploadResponse.ok) {
+                    const text = await uploadResponse.text();
+                    throw new Error(`Upload failed: ${text} (HTTP ${uploadResponse.status})`);
+                }
+
+                resultDiv.innerHTML = `
+                    <h3>✅ Upload Successful!</h3>
+                    <p>Public URL: <a href="${signed.url}" target="_blank">${signed.url}</a></p>
+                    <p>File size: ${file.size} bytes</p>
+                    <p>Content type: ${file.type}</p>
+                `;
+            } catch (error) {
+                console.error('Upload error:', error);
+                resultDiv.innerHTML = `
+                    <h3>❌ Upload Failed</h3>
+                    <p>Error: ${error.message}</p>
+                    <p>Check browser console for details</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

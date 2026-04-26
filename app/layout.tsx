@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://rt18-formula1-official-site.vercel.app"
   ),
-  title: "rt18_formula1 Official Website - F1 Art & News",
+  title: "rt18_formula1",
   description:
     "rt18_formula1 Official Website - Exclusive Formula 1 fan art, illustrations, and the latest F1 news. Discover visual content celebrating motorsport.",
   keywords: [
@@ -34,6 +34,11 @@ export const metadata: Metadata = {
     title: "rt18_formula1 Official Website",
     description: "F1 illustrations and latest Formula 1 race news by rt18_formula1.",
     images: ["/favicon.png"],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "rt18_f1",
   },
   icons: {
     icon: [{ url: "/favicon.png" }],

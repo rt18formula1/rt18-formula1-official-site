@@ -1,13 +1,15 @@
 import NewsPageClient from "@/components/news-page-client";
-import { getNewsList, getAlbumsByType } from "@/lib/supabase-queries";
+import { getNewsAlbumsMapping, getNewsList, getAlbumsByType } from "@/lib/supabase-queries";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 export default async function NewsPage() {
-  const [news, albums] = await Promise.all([
+  const [news, albums, mapping] = await Promise.all([
     getNewsList(),
     getAlbumsByType("backnumber"),
+    getNewsAlbumsMapping(),
   ]);
 
-  return <NewsPageClient news={news} albums={albums} />;
+  return <NewsPageClient news={news} albums={albums} mapping={mapping} />;
 }

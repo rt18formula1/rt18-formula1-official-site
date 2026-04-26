@@ -8,6 +8,7 @@ export const translations = {
     navPortfolio: "ポートフォリオ",
     navRequest: "リクエスト",
     navContact: "コンタクト",
+    navCalendar: "カレンダー",
     languageToggle: "English",
     admin: "Admin",
     newsMore: "→もっと見る",
@@ -22,6 +23,8 @@ export const translations = {
     contactText: "ご質問やお問い合わせはこちらからお願いします。",
     contactBtn: "お問い合わせ",
     readMore: "続きを読む →",
+    calendarSection: "Calendar",
+
   },
   en: {
     navHome: "Home",
@@ -30,6 +33,7 @@ export const translations = {
     navPortfolio: "Portfolio",
     navRequest: "Request",
     navContact: "Contact",
+    navCalendar: "Calendar",
     languageToggle: "日本語",
     admin: "Admin",
     newsMore: "→ More",
@@ -44,6 +48,8 @@ export const translations = {
     contactText: "Please send your questions and inquiries from here.",
     contactBtn: "Contact",
     readMore: "Read more →",
+    calendarSection: "Calendar",
+
   },
 } as const;
 

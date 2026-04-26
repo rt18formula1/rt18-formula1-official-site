@@ -1,14 +1,21 @@
 import PortfolioPageClient from "@/components/portfolio-page-client";
-import { getPortfolioList, getAlbumsByType, getAlbumRelations } from "@/lib/supabase-queries";
+import { getPortfolioList, getAlbumsByType, getPortfolioAlbumsMapping } from "@/lib/supabase-queries";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 export default async function PortfolioPage() {
-  const [portfolio, albums, relations] = await Promise.all([
+  const [portfolio, albums, mapping] = await Promise.all([
     getPortfolioList(),
     getAlbumsByType("portfolio"),
-    getAlbumRelations(),
+    getPortfolioAlbumsMapping(),
   ]);
 
-  return <PortfolioPageClient portfolio={portfolio} albums={albums} relations={relations} />;
+  return (
+    <PortfolioPageClient 
+      portfolio={portfolio} 
+      albums={albums} 
+      mapping={mapping} 
+    />
+  );
 }

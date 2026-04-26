@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 const COOKIE = "rt18_admin";
 
 function expectedPassword() {
-  return process.env.RT18_ADMIN_PASSWORD;
+  return process.env.RT18_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
 }
 
 export async function POST(request: Request) {
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   const expected = expectedPassword();
   if (!expected) {
     return NextResponse.json(
-      { ok: false, error: "RT18_ADMIN_PASSWORD is not configured" },
+      { ok: false, error: "RT18_ADMIN_PASSWORD or ADMIN_PASSWORD is not configured" },
       { status: 500 },
     );
   }

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "@/components/providers/language-provider";
 
@@ -17,21 +16,24 @@ export function SiteHeader() {
           <Link href="/#top" className="hover:underline">
             {t("navHome")}
           </Link>
-          <a href="/#profile" className="hover:underline">
-            {t("navProfile")}
-          </a>
           <Link href="/news" className="hover:underline">
             {t("navNews")}
           </Link>
           <Link href="/portfolio" className="hover:underline">
             {t("navPortfolio")}
           </Link>
-          <a href="/#request" className="hover:underline">
+          <Link href="/calendar" className="hover:underline">
+            {t("navCalendar")}
+          </Link>
+          <Link href="/#profile" className="hover:underline">
+            {t("navProfile")}
+          </Link>
+          <Link href="/#request" className="hover:underline">
             {t("navRequest")}
-          </a>
-          <a href="/#contact" className="hover:underline">
+          </Link>
+          <Link href="/#contact" className="hover:underline">
             {t("navContact")}
-          </a>
+          </Link>
         </nav>
         <div className="flex items-center gap-4 text-sm text-black">
           <button

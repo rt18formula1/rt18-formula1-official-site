@@ -1,13 +1,22 @@
 import HomeClient from "@/components/home-client";
-import { getNewsList, getPortfolioList } from "@/lib/supabase-queries";
+import { getNewsList, getPortfolioList, getAlbumsByType, getEvents } from "@/lib/supabase-queries";
+import { fetchGoogleEvents } from "@/lib/calendar-service";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 export default async function Home() {
-  const [news, portfolio] = await Promise.all([
+  const [news, portfolio, albums, manualEvents, googleEvents] = await Promise.all([
     getNewsList(),
     getPortfolioList(),
+    getAlbumsByType("portfolio"),
+    getEvents(),
+    fetchGoogleEvents(),
   ]);
+
+  const allEvents = [...manualEvents, ...googleEvents].sort((a, b) => 
+    new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+  );
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -24,7 +33,7 @@ export default async function Home() {
 
   return (
     <>
-      <HomeClient news={news} portfolio={portfolio} />
+      <HomeClient news={news} portfolio={portfolio} albums={albums} events={allEvents} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
     </>
   );
