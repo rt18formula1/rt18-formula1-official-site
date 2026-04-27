@@ -390,6 +390,53 @@ export async function getAdjacentPortfolio(currentSortOrder: number) {
 }
 
 // ----------------------------------------------------------------------
+// Album Relations CRUD
+// ----------------------------------------------------------------------
+
+export async function getAlbumRelations() {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("album_relations")
+    .select("*");
+
+  if (error) {
+    console.error("Error fetching album relations:", error);
+    return [];
+  }
+  return data as { parent_id: string; child_id: string }[];
+}
+
+export async function createAlbumRelation(parentId: string, childId: string) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("album_relations")
+    .insert({ parent_id: parentId, child_id: childId })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating album relation:", error);
+    return null;
+  }
+  return data;
+}
+
+export async function deleteAlbumRelation(parentId: string, childId: string) {
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from("album_relations")
+    .delete()
+    .eq("parent_id", parentId)
+    .eq("child_id", childId);
+
+  if (error) {
+    console.error("Error deleting album relation:", error);
+    return false;
+  }
+  return true;
+}
+
+// ----------------------------------------------------------------------
 // Events CRUD
 // ----------------------------------------------------------------------
 

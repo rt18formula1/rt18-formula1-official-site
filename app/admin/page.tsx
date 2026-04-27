@@ -6,8 +6,8 @@ import {
   getNewsList,
   getPortfolioList,
   getAlbumsByType,
-  uploadImageToStorage,
   getEvents,
+  uploadImageToStorage,
   type DbNews,
   type DbPortfolio,
   type DbAlbum,
@@ -34,6 +34,7 @@ import {
 // } from "@/lib/admin-edit-actions";
 
 import { AdminImageCard } from "@/components/admin-image-card";
+import { AlbumNodeEditor } from "@/components/album-node-editor";
 
 export default function AdminPage() {
   const [sessionOk, setSessionOk] = useState(false);
@@ -253,6 +254,16 @@ export default function AdminPage() {
   alert(`Edit functionality for ${item.type} ID: ${item.id} will be implemented soon.`);
 };
 
+// const handleAlbumEdit = (album: DbAlbum) => {
+//   // アルバム編集機能
+//   alert(`Album edit functionality for ${album.name_en || album.name_ja} will be implemented soon.`);
+// };
+
+const handleAlbumCreate = (name: string, type: "backnumber" | "portfolio") => {
+  // アルバム作成機能
+  alert(`Album creation: ${name} (${type}) will be implemented soon.`);
+};
+
   if (!sessionOk) {
     return (
       <div className="min-h-screen bg-white text-black">
@@ -457,6 +468,29 @@ export default function AdminPage() {
             {events.filter(e => e.source === "manual").length === 0 && (
               <p className="text-sm text-gray-400">No manual events created.</p>
             )}
+          </div>
+        </section>
+
+        {/* Album Relations Node Editor */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between border-b border-black/10 pb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold">Album Relations Editor</h2>
+              <button
+                onClick={() => handleAlbumCreate("New Album", "portfolio")}
+                className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded hover:bg-blue-600 transition"
+              >
+                + New Album
+              </button>
+            </div>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <p className="text-sm text-gray-600 mb-4">
+              Drag nodes to arrange, connect nodes to create parent-child relationships, double-click nodes to edit.
+            </p>
+            <AlbumNodeEditor 
+              albums={albums} 
+            />
           </div>
         </section>
       </div>
