@@ -438,6 +438,16 @@ export async function deleteAlbumRelation(parentId: string, childId: string) {
   return true;
 }
 
+export async function getAllAlbums() {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("albums")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) return [];
+  return data as DbAlbum[];
+}
+
 // ----------------------------------------------------------------------
 // Events CRUD
 // ----------------------------------------------------------------------

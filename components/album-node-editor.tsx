@@ -19,7 +19,7 @@ import {
   ReactFlowProvider,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { getAlbumRelations, getAlbumsByType } from "@/lib/supabase-queries";
+import { getAlbumRelations, getAlbumsByType, getAllAlbums } from "@/lib/supabase-queries";
 import { supabase } from "@/lib/supabaseClient";
 
 const AlbumNode = ({ data }: { data: any }) => {
@@ -42,11 +42,7 @@ function Flow() {
 
   useEffect(() => {
     const init = async () => {
-      const [portfolioAlbums, backnumberAlbums] = await Promise.all([
-        getAlbumsByType("portfolio"),
-        getAlbumsByType("backnumber"),
-      ]);
-      const allAlbums = [...portfolioAlbums, ...backnumberAlbums];
+      const allAlbums = await getAllAlbums();
       const initialNodes = allAlbums.map((album: any) => ({
         id: album.id,
         type: "album",

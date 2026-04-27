@@ -6,6 +6,8 @@ import {
   getNewsList,
   getPortfolioList,
   getAlbumsByType,
+  getAllAlbums,
+  getAlbumRelations,
   getEvents,
   uploadImageToStorage,
   type DbNews,
@@ -25,6 +27,7 @@ import {
   createEventAction,
   deleteEventAction,
 } from "@/lib/admin-actions";
+import { createAlbumRelation } from "@/lib/supabase-queries";
 // Edit actions will be used when implementing the edit modal
 // import {
 //   updateNewsTitle,
@@ -44,6 +47,7 @@ export default function AdminPage() {
   const [news, setNews] = useState<DbNews[]>([]);
   const [portfolio, setPortfolio] = useState<DbPortfolio[]>([]);
   const [albums, setAlbums] = useState<DbAlbum[]>([]);
+  const [albumRelations, setAlbumRelations] = useState<{ parent_id: string; child_id: string }[]>([]);
   const [events, setEvents] = useState<DbEvent[]>([]);
   const [loading, setLoading] = useState(false);
   
@@ -98,16 +102,17 @@ export default function AdminPage() {
   }, []);
 
   const loadData = async () => {
-    const [n, p, a1, a2, e] = await Promise.all([
+    const [n, p, allAlbums, relations, e] = await Promise.all([
       getNewsList(),
       getPortfolioList(),
-      getAlbumsByType("portfolio"),
-      getAlbumsByType("backnumber"),
+      getAllAlbums(),
+      getAlbumRelations(),
       getEvents(),
     ]);
     setNews(n);
     setPortfolio(p);
-    setAlbums([...a1, ...a2]);
+    setAlbums(allAlbums);
+    setAlbumRelations(relations);
     setEvents(e);
   };
 
@@ -184,16 +189,20 @@ export default function AdminPage() {
           const bucket = albumType === "backnumber" ? "bucknumber-covers" : "album-covers";
           cover_image_url = await uploadImageToStorage(bucket, formData.file);
         }
-        await createAlbumAction({
+        const newAlbum = await createAlbumAction({
           name_en: formData.title,
           name_ja: formData.title,
           description_en: formData.content,
           description_ja: formData.content,
           type: albumType,
-          parent_id: formData.parentId || null,
+          parent_id: null, // 使わない
           cover_image_url,
           sort_order: albums.length,
         });
+        
+        if (formData.parentId) {
+          await createAlbumRelation(formData.parentId, newAlbum.id);
+        }
       } else if (activeModal === "event") {
         await createEventAction({
           title: formData.title,
@@ -416,18 +425,26 @@ const handleAlbumCreate = (name: string, type: "backnumber" | "portfolio") => {
             <div className="space-y-4">
               <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Portfolio Albums</h3>
               <div className="space-y-2">
-                {albums.filter(a => a.type === "portfolio" && !a.parent_id).map(parent => (
-                  <AlbumTree key={parent.id} album={parent} albums={albums} depth={0} onDelete={loadData} />
-                ))}
+                {(() => {
+                  const childIds = new Set(albumRelations.map(r => r.child_id));
+                  const rootAlbums = albums.filter(a => a.type === "portfolio" && !childIds.has(a.id));
+                  return rootAlbums.map(parent => (
+                    <AlbumTree key={parent.id} album={parent} albums={albums} relations={albumRelations} depth={0} onDelete={loadData} />
+                  ));
+                })()}
               </div>
             </div>
             {/* Backnumbers */}
             <div className="space-y-4">
               <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Backnumbers</h3>
               <div className="space-y-2">
-                {albums.filter(a => a.type === "backnumber" && !a.parent_id).map(parent => (
-                  <AlbumTree key={parent.id} album={parent} albums={albums} depth={0} onDelete={loadData} />
-                ))}
+                {(() => {
+                  const childIds = new Set(albumRelations.map(r => r.child_id));
+                  const rootAlbums = albums.filter(a => a.type === "backnumber" && !childIds.has(a.id));
+                  return rootAlbums.map(parent => (
+                    <AlbumTree key={parent.id} album={parent} albums={albums} relations={albumRelations} depth={0} onDelete={loadData} />
+                  ));
+                })()}
               </div>
             </div>
           </div>
@@ -683,8 +700,11 @@ function AlbumListItem({ album, onDelete, isChild }: { album: DbAlbum, onDelete:
   );
 }
 
-function AlbumTree({ album, albums, depth, onDelete }: { album: DbAlbum, albums: DbAlbum[], depth: number, onDelete: () => void }) {
-  const children = albums.filter(child => child.parent_id === album.id);
+function AlbumTree({ album, albums, relations, depth, onDelete }: { album: DbAlbum, albums: DbAlbum[], relations: { parent_id: string; child_id: string }[], depth: number, onDelete: () => void }) {
+  const children = relations
+    .filter(r => r.parent_id === album.id)
+    .map(r => albums.find(a => a.id === r.child_id))
+    .filter((child): child is DbAlbum => child !== undefined);
   
   return (
     <div key={album.id} className="space-y-2">
@@ -700,6 +720,7 @@ function AlbumTree({ album, albums, depth, onDelete }: { album: DbAlbum, albums:
           key={child.id} 
           album={child} 
           albums={albums} 
+          relations={relations}
           depth={depth + 1} 
           onDelete={onDelete} 
         />
