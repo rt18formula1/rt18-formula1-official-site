@@ -488,9 +488,7 @@ const handleAlbumCreate = (name: string, type: "backnumber" | "portfolio") => {
             <p className="text-sm text-gray-600 mb-4">
               Drag nodes to arrange, connect nodes to create parent-child relationships, double-click nodes to edit.
             </p>
-            <AlbumNodeEditor 
-              albums={albums} 
-            />
+            <AlbumNodeEditor />
           </div>
         </section>
       </div>
