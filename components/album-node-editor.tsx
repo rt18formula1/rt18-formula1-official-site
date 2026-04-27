@@ -133,7 +133,7 @@ export function AlbumNodeEditor() {
   const handleEdgesChange = useCallback(
     async (changes: any) => {
       for (const change of changes) {
-        if (change.type === 'remove' && 'id' in change) {
+        if (change.type === 'remove' && change.id) {
           try {
             // Supabaseから削除
             if (!supabase) {
