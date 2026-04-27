@@ -6,17 +6,15 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { useLanguage } from "@/components/providers/language-provider";
 import { linktreeLinks, snsLinks } from "@/lib/content";
-import type { DbNews, DbPortfolio, DbAlbum, DbEvent } from "@/lib/supabase-queries";
+import type { DbNews, DbPortfolio, DbEvent } from "@/lib/supabase-queries";
 
 export default function HomeClient({ 
   news, 
   portfolio,
-  albums = [],
   events = []
 }: { 
   news: DbNews[]; 
   portfolio: DbPortfolio[];
-  albums?: DbAlbum[];
   events?: DbEvent[];
 }) {
   const { language, t } = useLanguage();
@@ -34,15 +32,16 @@ export default function HomeClient({
 
   const homeNews = [...news].slice(0, 3);
   
-  // Only show root albums on home
-  const rootAlbums = albums.filter(a => a.type === "portfolio" && !a.parent_id).slice(0, 3);
-  // If no albums, show recent portfolio items
-  const displayWorks = portfolio.slice(0, 6);
+  // Always show latest portfolio items in carousel (not albums)
+  const displayWorks = portfolio.slice(0, 10);
 
-  // Portfolio carousel state
-  const carouselItems = rootAlbums.length > 0
-    ? rootAlbums.map(a => ({ id: a.id, href: `/albums/${a.id}`, imageUrl: a.cover_image_url, title: language === "ja" ? a.name_ja || a.name_en : a.name_en, sub: "Collection" }))
-    : displayWorks.map(w => ({ id: w.id, href: `/portfolio/${w.id}`, imageUrl: w.image_url, title: language === "ja" ? w.title_ja || w.title_en : w.title_en, sub: "" }));
+  // Portfolio carousel: always use latest portfolio items
+  const carouselItems = displayWorks.map(w => ({
+    id: w.id,
+    href: `/portfolio/${w.id}`,
+    imageUrl: w.image_url,
+    title: language === "ja" ? w.title_ja || w.title_en : w.title_en,
+  }));
 
   const [carouselIndex, setCarouselIndex] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -126,8 +125,8 @@ export default function HomeClient({
               </Link>
             </div>
 
-            {/* Mobile/Tablet: Single-column carousel with auto-slide */}
-            <div className="lg:hidden">
+            {/* Single-column carousel for all screen sizes */}
+            <div className="max-w-2xl mx-auto">
               <div className="overflow-hidden rounded-2xl">
                 <div
                   className="flex transition-transform duration-500 ease-in-out"
@@ -141,14 +140,13 @@ export default function HomeClient({
                     >
                       <div className="aspect-square bg-black/5 relative overflow-hidden">
                         {item.imageUrl ? (
-                          <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
+                          <img src={item.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-5xl">🎨</div>
                         )}
                       </div>
-                      <div className="p-4">
-                        <h3 className="font-black text-lg line-clamp-2">{item.title}</h3>
-                        {item.sub && <p className="text-xs font-bold text-gray-400 uppercase tracking-tighter mt-1">{item.sub}</p>}
+                      <div className="p-4 md:p-6">
+                        <h3 className="font-black text-lg md:text-xl line-clamp-2 group-hover:text-blue-600 transition-colors">{item.title}</h3>
                       </div>
                     </Link>
                   ))}
@@ -165,59 +163,6 @@ export default function HomeClient({
                       onClick={() => goTo(idx)}
                       aria-label={`Slide ${idx + 1}`}
                     />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Desktop: Grid layout */}
-            <div className="hidden lg:block">
-              {rootAlbums.length > 0 ? (
-                <div className="grid grid-cols-3 gap-8">
-                  {rootAlbums.map((album) => (
-                    <Link
-                      key={album.id}
-                      href={`/albums/${album.id}`}
-                      className="group border border-black/10 rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all block"
-                    >
-                      <div className="aspect-square bg-black/5 relative overflow-hidden">
-                        {album.cover_image_url ? (
-                          <img src={album.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-5xl">📁</div>
-                        )}
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="bg-white px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-lg">View Album</span>
-                        </div>
-                      </div>
-                      <div className="p-6">
-                        <h3 className="font-black text-lg mb-1">{language === "ja" ? album.name_ja || album.name_en : album.name_en}</h3>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Collection</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-8">
-                  {displayWorks.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={`/portfolio/${item.id}`}
-                      className="group border border-black/10 rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all block hover:-translate-y-1"
-                    >
-                      <div className="aspect-square bg-black/5 relative overflow-hidden">
-                        {item.image_url ? (
-                          <img src={item.image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-5xl">🎨</div>
-                        )}
-                      </div>
-                      <div className="p-6">
-                        <h3 className="font-black text-lg group-hover:text-blue-600 transition-colors line-clamp-2">
-                          {language === "ja" ? item.title_ja || item.title_en : item.title_en}
-                        </h3>
-                      </div>
-                    </Link>
                   ))}
                 </div>
               )}

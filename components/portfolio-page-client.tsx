@@ -39,7 +39,10 @@ export default function PortfolioPageClient({
     return portfolio.filter(p => itemIds.has(p.id));
   }, [portfolio, currentAlbumId, mapping]);
 
+  const [activeTab, setActiveTab] = useState<"works" | "albums">("works");
   const title = language === "ja" ? "ポートフォリオ" : "Portfolio";
+
+  const isRoot = currentAlbumId === null;
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
@@ -50,94 +53,173 @@ export default function PortfolioPageClient({
           <div className="max-w-6xl mx-auto">
             <h1 className="text-3xl md:text-6xl font-black mb-4 md:mb-8 tracking-tighter">{title}</h1>
             
-            <nav className="flex items-center gap-2 md:gap-3 text-xs md:text-sm font-black uppercase tracking-widest text-gray-400 flex-wrap">
-              {breadcrumbs.map((crumb, idx) => (
-                <div key={crumb.id || 'root'} className="flex items-center gap-3">
-                  <button 
-                    onClick={() => setBreadcrumbs(breadcrumbs.slice(0, idx + 1))}
-                    className={`hover:text-black transition-colors ${idx === breadcrumbs.length - 1 ? 'text-black border-b-2 border-black' : ''}`}
-                  >
-                    {crumb.title}
-                  </button>
-                  {idx < breadcrumbs.length - 1 && <span className="opacity-30">/</span>}
-                </div>
-              ))}
-            </nav>
+            {isRoot ? (
+              <div className="flex gap-0 border-b border-black/10">
+                <button
+                  onClick={() => setActiveTab("works")}
+                  className={`px-4 md:px-6 py-2 md:py-3 text-xs md:text-sm font-black uppercase tracking-widest transition-colors ${
+                    activeTab === "works"
+                      ? "text-black border-b-2 border-black"
+                      : "text-gray-400 hover:text-black"
+                  }`}
+                >
+                  Works
+                </button>
+                <button
+                  onClick={() => setActiveTab("albums")}
+                  className={`px-4 md:px-6 py-2 md:py-3 text-xs md:text-sm font-black uppercase tracking-widest transition-colors ${
+                    activeTab === "albums"
+                      ? "text-black border-b-2 border-black"
+                      : "text-gray-400 hover:text-black"
+                  }`}
+                >
+                  Albums
+                </button>
+              </div>
+            ) : (
+              <nav className="flex items-center gap-2 md:gap-3 text-xs md:text-sm font-black uppercase tracking-widest text-gray-400 flex-wrap">
+                {breadcrumbs.map((crumb, idx) => (
+                  <div key={crumb.id || 'root'} className="flex items-center gap-3">
+                    <button 
+                      onClick={() => {
+                        setBreadcrumbs(breadcrumbs.slice(0, idx + 1));
+                        if (idx === 0) setActiveTab("albums");
+                      }}
+                      className={`hover:text-black transition-colors ${idx === breadcrumbs.length - 1 ? 'text-black border-b-2 border-black' : ''}`}
+                    >
+                      {crumb.title}
+                    </button>
+                    {idx < breadcrumbs.length - 1 && <span className="opacity-30">/</span>}
+                  </div>
+                ))}
+              </nav>
+            )}
           </div>
         </header>
 
         <main className="max-w-6xl mx-auto px-4 py-8 md:py-16">
-          {currentLevelAlbums.length > 0 && (
-            <div className="mb-20">
-              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-10">Collections</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
-                {currentLevelAlbums.map((album) => (
-                  <button
-                    key={album.id}
-                    onClick={() => setBreadcrumbs([...breadcrumbs, { id: album.id, title: language === "ja" ? album.name_ja || album.name_en : album.name_en }])}
-                    className="group text-left border border-black/10 rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
-                  >
-                    <div className="aspect-square bg-black/5 relative overflow-hidden">
-                      {album.cover_image_url ? (
-                        <img 
-                          src={album.cover_image_url} 
-                          alt="" 
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-5xl">📁</div>
-                      )}
-                      <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <span className="bg-white px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">Explore</span>
-                      </div>
+          {/* Albums tab or navigating inside an album */}
+          {(activeTab === "albums" || !isRoot) && (
+            <>
+              {currentLevelAlbums.length > 0 && (
+                <div className={currentLevelWorks.length > 0 && !isRoot ? "mb-20" : ""}>
+                  <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-10">
+                    {isRoot ? "Albums" : "Sub-collections"}
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
+                    {currentLevelAlbums.map((album) => (
+                      <button
+                        key={album.id}
+                        onClick={() => setBreadcrumbs([...breadcrumbs, { id: album.id, title: language === "ja" ? album.name_ja || album.name_en : album.name_en }])}
+                        className="group text-left border border-black/10 rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                      >
+                        <div className="aspect-square bg-black/5 relative overflow-hidden">
+                          {album.cover_image_url ? (
+                            <img 
+                              src={album.cover_image_url} 
+                              alt="" 
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-5xl">📁</div>
+                          )}
+                          <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="bg-white px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">Explore</span>
+                          </div>
+                        </div>
+                        <div className="p-4 md:p-8">
+                          <h3 className="font-black text-lg md:text-2xl mb-2">{language === "ja" ? album.name_ja || album.name_en : album.name_en}</h3>
+                          <p className="text-sm text-gray-500 font-medium leading-relaxed line-clamp-2">
+                            {language === "ja" ? album.description_ja || album.description_en : album.description_en}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Works inside an album (not root albums tab) */}
+              {!isRoot && (
+                <div>
+                  <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-10">
+                    Works in this collection
+                  </h2>
+                  {currentLevelWorks.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
+                      {currentLevelWorks.map((work) => (
+                        <Link
+                          key={work.id}
+                          href={`/portfolio/${work.id}`}
+                          className="group border border-black/10 rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                        >
+                          <div className="aspect-square bg-black/5 relative overflow-hidden">
+                            {work.image_url ? (
+                              <img 
+                                src={work.image_url} 
+                                alt="" 
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-5xl">🎨</div>
+                            )}
+                          </div>
+                          <div className="p-4 md:p-8">
+                            <h3 className="font-black text-base md:text-xl group-hover:text-blue-600 transition-colors">
+                              {language === "ja" ? work.title_ja || work.title_en : work.title_en}
+                            </h3>
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                    <div className="p-4 md:p-8">
-                      <h3 className="font-black text-lg md:text-2xl mb-2">{language === "ja" ? album.name_ja || album.name_en : album.name_en}</h3>
-                      <p className="text-sm text-gray-500 font-medium leading-relaxed line-clamp-2">
-                        {language === "ja" ? album.description_ja || album.description_en : album.description_en}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+                  ) : (
+                    <p className="text-gray-400 font-bold italic">No works found in this collection.</p>
+                  )}
+                </div>
+              )}
+
+              {isRoot && currentLevelAlbums.length === 0 && (
+                <p className="text-gray-400 font-bold italic">No albums yet.</p>
+              )}
+            </>
           )}
 
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-10">
-              {currentAlbumId ? "Works in this collection" : "All Works"}
-            </h2>
-            {currentLevelWorks.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
-                {currentLevelWorks.map((work) => (
-                  <Link
-                    key={work.id}
-                    href={`/portfolio/${work.id}`}
-                    className="group border border-black/10 rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
-                  >
-                    <div className="aspect-square bg-black/5 relative overflow-hidden">
-                      {work.image_url ? (
-                        <img 
-                          src={work.image_url} 
-                          alt="" 
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-5xl">🎨</div>
-                      )}
-                    </div>
-                    <div className="p-4 md:p-8">
-                      <h3 className="font-black text-base md:text-xl group-hover:text-blue-600 transition-colors">
-                        {language === "ja" ? work.title_ja || work.title_en : work.title_en}
-                      </h3>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-400 font-bold italic">No works found in this collection.</p>
-            )}
-          </div>
+          {/* Works tab at root */}
+          {activeTab === "works" && isRoot && (
+            <div>
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-10">All Works</h2>
+              {currentLevelWorks.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
+                  {currentLevelWorks.map((work) => (
+                    <Link
+                      key={work.id}
+                      href={`/portfolio/${work.id}`}
+                      className="group border border-black/10 rounded-2xl overflow-hidden bg-white hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                    >
+                      <div className="aspect-square bg-black/5 relative overflow-hidden">
+                        {work.image_url ? (
+                          <img 
+                            src={work.image_url} 
+                            alt="" 
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-5xl">🎨</div>
+                        )}
+                      </div>
+                      <div className="p-4 md:p-8">
+                        <h3 className="font-black text-base md:text-xl group-hover:text-blue-600 transition-colors">
+                          {language === "ja" ? work.title_ja || work.title_en : work.title_en}
+                        </h3>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400 font-bold italic">No works yet.</p>
+              )}
+            </div>
+          )}
         </main>
       </div>
       <SiteFooter />
