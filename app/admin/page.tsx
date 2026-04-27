@@ -27,6 +27,7 @@ import {
 } from "@/lib/admin-actions";
 
 import { AdminImageCard } from "@/components/admin-image-card";
+import { AdminHierarchyGraph } from "@/components/admin-hierarchy-graph";
 
 export default function AdminPage() {
   const [sessionOk, setSessionOk] = useState(false);
@@ -345,45 +346,22 @@ export default function AdminPage() {
           </div>
         </section>
 
-        {/* Albums Section (Hierarchical Display) */}
+        {/* Albums & Backnumbers - Hierarchy Graph */}
         <section className="space-y-6">
           <div className="border-b border-black/10 pb-4">
             <h2 className="text-xl font-bold">Albums & Backnumbers</h2>
+            <p className="text-xs text-gray-400 mt-1">Click a node to expand actions. Arrows show parent → child → grandchild relationships.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Portfolio Albums */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Portfolio Albums</h3>
-              <div className="space-y-2">
-                {albums.filter(a => a.type === "portfolio" && !a.parent_id).map(parent => (
-                  <div key={parent.id} className="space-y-2">
-                    <AlbumListItem album={parent} onDelete={() => deleteAlbumAction(parent.id).then(loadData)} />
-                    {albums.filter(child => child.parent_id === parent.id).map(child => (
-                      <div key={child.id} className="ml-8 border-l-2 border-black/5 pl-4">
-                        <AlbumListItem album={child} onDelete={() => deleteAlbumAction(child.id).then(loadData)} isChild />
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Backnumbers */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Backnumbers</h3>
-              <div className="space-y-2">
-                {albums.filter(a => a.type === "backnumber" && !a.parent_id).map(parent => (
-                  <div key={parent.id} className="space-y-2">
-                    <AlbumListItem album={parent} onDelete={() => deleteAlbumAction(parent.id).then(loadData)} />
-                    {albums.filter(child => child.parent_id === parent.id).map(child => (
-                      <div key={child.id} className="ml-8 border-l-2 border-black/5 pl-4">
-                        <AlbumListItem album={child} onDelete={() => deleteAlbumAction(child.id).then(loadData)} isChild />
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <AdminHierarchyGraph
+            albums={albums}
+            onDeleteAlbum={(id) => deleteAlbumAction(id).then(loadData)}
+            onCreateChild={(parentId, type) => {
+              resetForm();
+              setAlbumType(type);
+              setFormData(prev => ({ ...prev, parentId: parentId || "" }));
+              setActiveModal("album");
+            }}
+          />
         </section>
 
         {/* Events Section */}
@@ -594,23 +572,3 @@ export default function AdminPage() {
   );
 }
 
-function AlbumListItem({ album, onDelete, isChild }: { album: DbAlbum, onDelete: () => void, isChild?: boolean }) {
-  return (
-    <div className={`p-3 border border-black/10 rounded-xl flex items-center justify-between bg-white shadow-sm hover:shadow-md transition-shadow ${isChild ? 'bg-gray-50' : ''}`}>
-      <div className="flex items-center gap-3 overflow-hidden">
-        <div className="w-10 h-10 shrink-0 bg-black/5 rounded-lg overflow-hidden relative border border-black/5">
-          {album.cover_image_url ? (
-            <img src={album.cover_image_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-xs">📁</div>
-          )}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[9px] font-mono text-gray-400 truncate">{album.id}</p>
-          <p className="font-black text-sm truncate">{album.name_en}</p>
-        </div>
-      </div>
-      <button onClick={(e) => { e.stopPropagation(); if (confirm("Delete?")) onDelete(); }} className="text-red-500 text-xs font-bold hover:underline ml-4">Delete</button>
-    </div>
-  );
-}
