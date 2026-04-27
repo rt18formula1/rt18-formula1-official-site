@@ -100,35 +100,34 @@ export function AlbumNodeEditor() {
     initializeData();
   }, [setNodes, setEdges]);
 
-  const onConnect = useCallback(
-    async (params: Connection) => {
-      if (params.source && params.target) {
-        try {
-          // Supabaseに保存
-          if (!supabase) {
-            console.error("Supabase client not initialized");
-            return;
-          }
-          
-          const { error } = await supabase.from('album_relations').insert({
-            parent_id: params.source,
-            child_id: params.target,
-            sort_order: 0,
-          });
-          
-          if (!error) {
-            // UIに反映
-            setEdges((eds) => addEdge({ ...params, markerEnd: { type: MarkerType.ArrowClosed } }, eds));
-          } else {
-            console.error("Error creating album relation:", error);
-          }
-        } catch (error) {
-          console.error("Error creating album relation:", error);
-        }
-      }
-    },
-    [setEdges]
+  const onConnect = useCallback(async (params: Connection) => {
+  console.log('onConnect fired:', params); // デバッグ用
+
+  if (!supabase) {
+    console.error("Supabase client not initialized");
+    return;
+  }
+
+  const { error } = await supabase
+    .from('album_relations')
+    .insert({
+      parent_id: params.source,
+      child_id: params.target,
+      sort_order: 0,
+    });
+
+  if (error) {
+    console.error('Insert failed:', error);
+    return;
+  }
+
+  setEdges((eds) =>
+    addEdge(
+      { ...params, markerEnd: { type: MarkerType.ArrowClosed } },
+      eds
+    )
   );
+}, [setEdges]);
 
   const handleEdgesChange = useCallback(
     async (changes: any) => {
