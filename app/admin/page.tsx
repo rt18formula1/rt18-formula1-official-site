@@ -417,14 +417,7 @@ const handleAlbumCreate = (name: string, type: "backnumber" | "portfolio") => {
               <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Portfolio Albums</h3>
               <div className="space-y-2">
                 {albums.filter(a => a.type === "portfolio" && !a.parent_id).map(parent => (
-                  <div key={parent.id} className="space-y-2">
-                    <AlbumListItem album={parent} onDelete={() => deleteAlbumAction(parent.id).then(loadData)} />
-                    {albums.filter(child => child.parent_id === parent.id).map(child => (
-                      <div key={child.id} className="ml-8 border-l-2 border-black/5 pl-4">
-                        <AlbumListItem album={child} onDelete={() => deleteAlbumAction(child.id).then(loadData)} isChild />
-                      </div>
-                    ))}
-                  </div>
+                  <AlbumTree key={parent.id} album={parent} albums={albums} depth={0} onDelete={loadData} />
                 ))}
               </div>
             </div>
@@ -433,14 +426,7 @@ const handleAlbumCreate = (name: string, type: "backnumber" | "portfolio") => {
               <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Backnumbers</h3>
               <div className="space-y-2">
                 {albums.filter(a => a.type === "backnumber" && !a.parent_id).map(parent => (
-                  <div key={parent.id} className="space-y-2">
-                    <AlbumListItem album={parent} onDelete={() => deleteAlbumAction(parent.id).then(loadData)} />
-                    {albums.filter(child => child.parent_id === parent.id).map(child => (
-                      <div key={child.id} className="ml-8 border-l-2 border-black/5 pl-4">
-                        <AlbumListItem album={child} onDelete={() => deleteAlbumAction(child.id).then(loadData)} isChild />
-                      </div>
-                    ))}
-                  </div>
+                  <AlbumTree key={parent.id} album={parent} albums={albums} depth={0} onDelete={loadData} />
                 ))}
               </div>
             </div>
@@ -693,6 +679,31 @@ function AlbumListItem({ album, onDelete, isChild }: { album: DbAlbum, onDelete:
         </div>
       </div>
       <button onClick={(e) => { e.stopPropagation(); if (confirm("Delete?")) onDelete(); }} className="text-red-500 text-xs font-bold hover:underline ml-4">Delete</button>
+    </div>
+  );
+}
+
+function AlbumTree({ album, albums, depth, onDelete }: { album: DbAlbum, albums: DbAlbum[], depth: number, onDelete: () => void }) {
+  const children = albums.filter(child => child.parent_id === album.id);
+  
+  return (
+    <div key={album.id} className="space-y-2">
+      <div style={{ marginLeft: depth * 20 }}>
+        <AlbumListItem 
+          album={album} 
+          onDelete={() => deleteAlbumAction(album.id).then(onDelete)} 
+          isChild={depth > 0} 
+        />
+      </div>
+      {children.map(child => (
+        <AlbumTree 
+          key={child.id} 
+          album={child} 
+          albums={albums} 
+          depth={depth + 1} 
+          onDelete={onDelete} 
+        />
+      ))}
     </div>
   );
 }

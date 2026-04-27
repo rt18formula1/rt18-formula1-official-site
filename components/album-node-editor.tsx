@@ -13,6 +13,7 @@ import {
   Handle,
   Position,
   BackgroundVariant,
+  MarkerType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { getAlbumRelations, getAlbumsByType } from "@/lib/supabase-queries";
@@ -67,8 +68,8 @@ export function AlbumNodeEditor() {
             type: album.type
           },
           position: { 
-            x: album.position_x ?? Math.random() * 400, 
-            y: album.position_y ?? Math.random() * 400 
+            x: album.position_x || 0, 
+            y: album.position_y || 0 
           },
           style: {
             background: album.type === 'backnumber' ? '#dbeafe' : '#d1fae5',
@@ -115,19 +116,54 @@ export function AlbumNodeEditor() {
             sort_order: 0,
           });
           
-          if (error) {
+          if (!error) {
+            // UIに反映
+            setEdges((eds) => addEdge({ ...params, markerEnd: { type: MarkerType.ArrowClosed } }, eds));
+          } else {
             console.error("Error creating album relation:", error);
-            return;
           }
-          
-          // UIに反映
-          setEdges((eds) => addEdge(params, eds));
         } catch (error) {
           console.error("Error creating album relation:", error);
         }
       }
     },
     [setEdges]
+  );
+
+  const handleEdgesChange = useCallback(
+    async (changes: any) => {
+      for (const change of changes) {
+        if (change.type === 'remove' && 'id' in change) {
+          try {
+            // Supabaseから削除
+            if (!supabase) {
+              console.error("Supabase client not initialized");
+              return;
+            }
+            
+            // edge.idからsourceとtargetを抽出
+            const edgeId = change.id;
+            const [source, target] = edgeId.split('-');
+            
+            const { error } = await supabase.from('album_relations')
+              .delete()
+              .eq('parent_id', source)
+              .eq('child_id', target);
+            
+            if (error) {
+              console.error("Error deleting album relation:", error);
+              return;
+            }
+          } catch (error) {
+            console.error("Error deleting album relation:", error);
+          }
+        }
+      }
+      
+      // UIに反映
+      onEdgesChange(changes);
+    },
+    [onEdgesChange]
   );
 
   const onEdgeClick = useCallback(
@@ -185,6 +221,122 @@ export function AlbumNodeEditor() {
     []
   );
 
+  const handleAutoLayout = useCallback(async () => {
+    try {
+      if (!supabase) {
+        console.error("Supabase client not initialized");
+        return;
+      }
+
+      // Get all relations
+      const { data: relations, error: relationsError } = await supabase
+        .from('album_relations')
+        .select('*');
+      
+      if (relationsError) {
+        console.error("Error fetching relations:", relationsError);
+        return;
+      }
+
+      // Get all albums
+      const [portfolioAlbums, backnumberAlbums] = await Promise.all([
+        getAlbumsByType("portfolio"),
+        getAlbumsByType("backnumber"),
+      ]);
+      
+      const allAlbums = [...portfolioAlbums, ...backnumberAlbums];
+
+      // Find root nodes (albums that are never children)
+      const childIds = new Set(relations?.map(r => r.child_id) || []);
+      const rootNodes = allAlbums.filter(album => !childIds.has(album.id));
+
+      // BFS to calculate hierarchy
+      const layout: { [key: string]: { level: number; index: number } } = {};
+      const levels: string[][] = [];
+      
+      // Initialize level 0 with root nodes
+      levels[0] = rootNodes.map(node => node.id);
+      rootNodes.forEach((node, index) => {
+        layout[node.id] = { level: 0, index };
+      });
+
+      // Process each level
+      let currentLevel = 0;
+      while (levels[currentLevel] && levels[currentLevel].length > 0) {
+        const nextLevel: string[] = [];
+        
+        levels[currentLevel].forEach(parentId => {
+          const children = relations?.filter(r => r.parent_id === parentId) || [];
+          children.forEach(child => {
+            if (!layout[child.child_id]) {
+              layout[child.child_id] = { level: currentLevel + 1, index: nextLevel.length };
+              nextLevel.push(child.child_id);
+            }
+          });
+        });
+        
+        if (nextLevel.length > 0) {
+          levels[currentLevel + 1] = nextLevel;
+        }
+        currentLevel++;
+      }
+
+      // Calculate positions and update database
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updates: Promise<any>[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updatedNodes: any[] = [];
+
+      Object.entries(layout).forEach(([albumId, { level, index }]) => {
+        const x = (index + 1) * 200; // Horizontal spacing
+        const y = level * 200; // Vertical spacing
+        
+        if (supabase) {
+          updates.push(
+            Promise.resolve(
+              supabase.from('albums').update({
+                position_x: x,
+                position_y: y,
+              }).eq('id', albumId)
+            )
+          );
+        }
+
+        // Update node state
+        const nodeIndex = nodes.findIndex(n => n.id === albumId);
+        if (nodeIndex !== -1) {
+          updatedNodes.push({
+            ...nodes[nodeIndex],
+            position: { x, y }
+          });
+        }
+      });
+
+      // Execute all updates
+      await Promise.all(updates);
+      
+      // Update UI
+      setNodes(prevNodes => 
+        prevNodes.map(node => {
+          const layoutInfo = layout[node.id];
+          if (layoutInfo) {
+            return {
+              ...node,
+              position: { 
+                x: (layoutInfo.index + 1) * 200,
+                y: layoutInfo.level * 200
+              }
+            };
+          }
+          return node;
+        })
+      );
+
+    } catch (error) {
+      console.error("Error in auto layout:", error);
+    }
+  }, [nodes, setNodes]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
@@ -195,22 +347,32 @@ export function AlbumNodeEditor() {
 
   return (
     <div className="h-[600px] bg-gray-50 rounded-lg border border-gray-200">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onEdgeClick={onEdgeClick}
-        onNodeDragStop={onNodeDragStop}
-        nodeTypes={nodeTypes}
-        fitView
-        attributionPosition="bottom-left"
-      >
-        <Controls />
-        <MiniMap />
-        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-      </ReactFlow>
+      <div className="p-2 border-b border-gray-200 flex justify-end">
+        <button
+          onClick={handleAutoLayout}
+          className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded hover:bg-green-600 transition"
+        >
+          Auto Layout
+        </button>
+      </div>
+      <div className="h-[550px]">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={handleEdgesChange}
+          onConnect={onConnect}
+          onEdgeClick={onEdgeClick}
+          onNodeDragStop={onNodeDragStop}
+          nodeTypes={nodeTypes}
+          fitView
+          attributionPosition="bottom-left"
+        >
+          <Controls />
+          <MiniMap />
+          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+        </ReactFlow>
+      </div>
     </div>
   );
 }
