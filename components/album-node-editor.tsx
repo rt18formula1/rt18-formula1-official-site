@@ -147,6 +147,7 @@ function Flow() {
           onEdgeClick={onEdgeClick}
           onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
+          connectOnClick={true}
           fitView
           attributionPosition="bottom-left"
         >
