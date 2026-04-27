@@ -33,6 +33,8 @@ export type DbAlbum = {
   type: "backnumber" | "portfolio";
   tags: string[];
   sort_order: number;
+  position_x: number;
+  position_y: number;
   created_at: string;
 };
 

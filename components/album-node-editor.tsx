@@ -15,7 +15,8 @@ import {
   BackgroundVariant,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { getAlbumRelations, createAlbumRelation, deleteAlbumRelation, getAlbumsByType } from "@/lib/supabase-queries";
+import { getAlbumRelations, getAlbumsByType } from "@/lib/supabase-queries";
+import { supabase } from "@/lib/supabaseClient";
 
 // Custom node component
 const AlbumNode = ({ data }: { data: { label: string; type: string } }) => {
@@ -66,8 +67,8 @@ export function AlbumNodeEditor() {
             type: album.type
           },
           position: { 
-            x: Math.random() * 400, 
-            y: Math.random() * 400 
+            x: album.position_x ?? Math.random() * 400, 
+            y: album.position_y ?? Math.random() * 400 
           },
           style: {
             background: album.type === 'backnumber' ? '#dbeafe' : '#d1fae5',
@@ -102,7 +103,24 @@ export function AlbumNodeEditor() {
     async (params: Connection) => {
       if (params.source && params.target) {
         try {
-          await createAlbumRelation(params.source, params.target);
+          // Supabaseに保存
+          if (!supabase) {
+            console.error("Supabase client not initialized");
+            return;
+          }
+          
+          const { error } = await supabase.from('album_relations').insert({
+            parent_id: params.source,
+            child_id: params.target,
+            sort_order: 0,
+          });
+          
+          if (error) {
+            console.error("Error creating album relation:", error);
+            return;
+          }
+          
+          // UIに反映
           setEdges((eds) => addEdge(params, eds));
         } catch (error) {
           console.error("Error creating album relation:", error);
@@ -117,7 +135,23 @@ export function AlbumNodeEditor() {
       event.stopPropagation();
       if (edge.source && edge.target) {
         try {
-          await deleteAlbumRelation(edge.source, edge.target);
+          // Supabaseから削除
+          if (!supabase) {
+            console.error("Supabase client not initialized");
+            return;
+          }
+          
+          const { error } = await supabase.from('album_relations')
+            .delete()
+            .eq('parent_id', edge.source)
+            .eq('child_id', edge.target);
+          
+          if (error) {
+            console.error("Error deleting album relation:", error);
+            return;
+          }
+          
+          // UIに反映
           setEdges((eds) => eds.filter((e) => e.id !== edge.id));
         } catch (error) {
           console.error("Error deleting album relation:", error);
@@ -125,6 +159,30 @@ export function AlbumNodeEditor() {
       }
     },
     [setEdges]
+  );
+
+  const onNodeDragStop = useCallback(
+    async (event: React.MouseEvent, node: { id: string; position: { x: number; y: number } }) => {
+      try {
+        // Supabaseに位置を保存
+        if (!supabase) {
+          console.error("Supabase client not initialized");
+          return;
+        }
+        
+        const { error } = await supabase.from('albums').update({
+          position_x: node.position.x,
+          position_y: node.position.y,
+        }).eq('id', node.id);
+        
+        if (error) {
+          console.error("Error updating album position:", error);
+        }
+      } catch (error) {
+        console.error("Error updating album position:", error);
+      }
+    },
+    []
   );
 
   if (loading) {
@@ -144,6 +202,7 @@ export function AlbumNodeEditor() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onEdgeClick={onEdgeClick}
+        onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         fitView
         attributionPosition="bottom-left"
