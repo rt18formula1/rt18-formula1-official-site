@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useCallback, useEffect } from "react";
 import {
@@ -14,7 +15,6 @@ import {
   Position,
   BackgroundVariant,
   MarkerType,
-  Edge,
   Node,
   ReactFlowProvider,
 } from "@xyflow/react";
@@ -22,15 +22,13 @@ import "@xyflow/react/dist/style.css";
 import { getAlbumRelations, getAlbumsByType } from "@/lib/supabase-queries";
 import { supabase } from "@/lib/supabaseClient";
 
-type AlbumNodeData = Record<string, unknown> & { label: string; albumType: string };
-
-const AlbumNode = ({ data }: { data: AlbumNodeData }) => {
+const AlbumNode = ({ data }: { data: any }) => {
   const bg = data.albumType === "backnumber" ? "#dbeafe" : "#d1fae5";
   const border = data.albumType === "backnumber" ? "2px solid #3b82f6" : "2px solid #10b981";
   return (
     <div style={{ background: bg, border, borderRadius: 6, padding: "8px 14px", minWidth: 140, textAlign: "center", fontSize: 12, fontWeight: 500, cursor: "grab" }}>
       <Handle type="target" position={Position.Top} style={{ width: 10, height: 10, background: "#888" }} />
-      <div style={{ pointerEvents: "none" }}>{data.label as string}</div>
+      <div style={{ pointerEvents: "none" }}>{data.label}</div>
       <Handle type="source" position={Position.Bottom} style={{ width: 10, height: 10, background: "#555" }} />
     </div>
   );
@@ -39,8 +37,8 @@ const AlbumNode = ({ data }: { data: AlbumNodeData }) => {
 const nodeTypes = { album: AlbumNode };
 
 function Flow() {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([] as any[]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([] as any[]);
 
   useEffect(() => {
     const init = async () => {
@@ -49,14 +47,12 @@ function Flow() {
         getAlbumsByType("backnumber"),
       ]);
       const allAlbums = [...portfolioAlbums, ...backnumberAlbums];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const initialNodes = allAlbums.map((album: any) => ({
         id: album.id,
         type: "album",
         data: { label: album.name_ja || album.name_en, albumType: album.type },
         position: { x: Number(album.position_x) || 0, y: Number(album.position_y) || 0 },
       }));
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const relations: any[] = await getAlbumRelations();
       const initialEdges = relations.map((r) => ({
         id: `${r.parent_id}__${r.child_id}`,
@@ -64,9 +60,7 @@ function Flow() {
         target: r.child_id,
         markerEnd: { type: MarkerType.ArrowClosed },
       }));
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setNodes(initialNodes as any);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setEdges(initialEdges as any);
     };
     init();
@@ -74,17 +68,13 @@ function Flow() {
 
   const onConnect = useCallback(async (params: Connection) => {
     console.log("onConnect fired:", params);
-    if (!supabase || !params.source || !params.target) {
-      console.log("early return:", { supabase: !!supabase, source: params.source, target: params.target });
-      return;
-    }
+    if (!supabase || !params.source || !params.target) return;
     const newEdge = {
       ...params,
       id: `${params.source}__${params.target}`,
       markerEnd: { type: MarkerType.ArrowClosed },
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setEdges((eds: any) => addEdge(newEdge, eds));
+    setEdges((eds: any[]) => addEdge(newEdge, eds) as any[]);
     const { error } = await supabase.from("album_relations").insert({
       parent_id: params.source,
       child_id: params.target,
@@ -93,10 +83,9 @@ function Flow() {
     if (error) console.error("Insert failed:", error);
   }, [setEdges]);
 
-  const onEdgeClick = useCallback(async (_: React.MouseEvent, edge: Edge) => {
+  const onEdgeClick = useCallback(async (_: React.MouseEvent, edge: any) => {
     if (!supabase) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setEdges((eds: any) => eds.filter((e: Edge) => e.id !== edge.id));
+    setEdges((eds: any[]) => eds.filter((e: any) => e.id !== edge.id));
     const { error } = await supabase.from("album_relations")
       .delete().eq("parent_id", edge.source).eq("child_id", edge.target);
     if (error) console.error("Delete failed:", error);
@@ -117,19 +106,15 @@ function Flow() {
       getAlbumsByType("backnumber"),
     ]);
     const allAlbums = [...portfolioAlbums, ...backnumberAlbums];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const childIds = new Set((relations || []).map((r: any) => r.child_id));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rootNodes = allAlbums.filter((a: any) => !childIds.has(a.id));
     const layout: { [key: string]: { level: number; index: number } } = {};
-    const levels: string[][] = [rootNodes.map((n: { id: string }) => n.id)];
-    rootNodes.forEach((n: { id: string }, i: number) => { layout[n.id] = { level: 0, index: i }; });
+    const levels: string[][] = [rootNodes.map((n: any) => n.id)];
+    rootNodes.forEach((n: any, i: number) => { layout[n.id] = { level: 0, index: i }; });
     let cur = 0;
     while (levels[cur]?.length) {
       const next: string[] = [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       levels[cur].forEach((pid) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (relations || []).filter((r: any) => r.parent_id === pid).forEach((r: any) => {
           if (!layout[r.child_id]) {
             layout[r.child_id] = { level: cur + 1, index: next.length };
@@ -143,8 +128,7 @@ function Flow() {
     await Promise.all(Object.entries(layout).map(([id, { level, index }]) =>
       supabase!.from("albums").update({ position_x: (index + 1) * 220, position_y: level * 180 }).eq("id", id)
     ));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setNodes((prev: any) => prev.map((n: Node) => {
+    setNodes((prev: any[]) => prev.map((n: any) => {
       const l = layout[n.id];
       return l ? { ...n, position: { x: (l.index + 1) * 220, y: l.level * 180 } } : n;
     }));
