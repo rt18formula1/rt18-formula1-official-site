@@ -16,32 +16,31 @@ import {
   MarkerType,
   Edge,
   Node,
+  ReactFlowProvider,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { getAlbumRelations, getAlbumsByType } from "@/lib/supabase-queries";
 import { supabase } from "@/lib/supabaseClient";
 
-type AlbumNodeData = { label: string; type: string };
+type AlbumNodeData = Record<string, unknown> & { label: string; albumType: string };
 
 const AlbumNode = ({ data }: { data: AlbumNodeData }) => {
-  const bg = data.type === "backnumber" ? "#dbeafe" : "#d1fae5";
-  const border = data.type === "backnumber" ? "1px solid #3b82f6" : "1px solid #10b981";
+  const bg = data.albumType === "backnumber" ? "#dbeafe" : "#d1fae5";
+  const border = data.albumType === "backnumber" ? "2px solid #3b82f6" : "2px solid #10b981";
   return (
-    <div style={{ background: bg, border, borderRadius: 6, padding: "8px 14px", minWidth: 120, textAlign: "center", fontSize: 12, fontWeight: 500 }}>
-      <Handle type="target" position={Position.Top} />
-      <div>{data.label}</div>
-      <Handle type="source" position={Position.Bottom} />
+    <div style={{ background: bg, border, borderRadius: 6, padding: "8px 14px", minWidth: 140, textAlign: "center", fontSize: 12, fontWeight: 500, cursor: "grab" }}>
+      <Handle type="target" position={Position.Top} style={{ width: 10, height: 10, background: "#888" }} />
+      <div style={{ pointerEvents: "none" }}>{data.label as string}</div>
+      <Handle type="source" position={Position.Bottom} style={{ width: 10, height: 10, background: "#555" }} />
     </div>
   );
 };
 
 const nodeTypes = { album: AlbumNode };
 
-export function AlbumNodeEditor() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<AlbumNodeData>>([] as any);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([] as any);
+function Flow() {
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   useEffect(() => {
     const init = async () => {
@@ -51,16 +50,16 @@ export function AlbumNodeEditor() {
       ]);
       const allAlbums = [...portfolioAlbums, ...backnumberAlbums];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const initialNodes: Node<AlbumNodeData>[] = allAlbums.map((album: any) => ({
+      const initialNodes = allAlbums.map((album: any) => ({
         id: album.id,
         type: "album",
-        data: { label: album.name_ja || album.name_en, type: album.type },
-        position: { x: album.position_x || 0, y: album.position_y || 0 },
+        data: { label: album.name_ja || album.name_en, albumType: album.type },
+        position: { x: Number(album.position_x) || 0, y: Number(album.position_y) || 0 },
       }));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const relations: any[] = await getAlbumRelations();
-      const initialEdges: Edge[] = relations.map((r) => ({
-        id: `${r.parent_id}-${r.child_id}`,
+      const initialEdges = relations.map((r) => ({
+        id: `${r.parent_id}__${r.child_id}`,
         source: r.parent_id,
         target: r.child_id,
         markerEnd: { type: MarkerType.ArrowClosed },
@@ -74,29 +73,40 @@ export function AlbumNodeEditor() {
   }, [setNodes, setEdges]);
 
   const onConnect = useCallback(async (params: Connection) => {
-    if (!supabase || !params.source || !params.target) return;
+    console.log("onConnect fired:", params);
+    if (!supabase || !params.source || !params.target) {
+      console.log("early return:", { supabase: !!supabase, source: params.source, target: params.target });
+      return;
+    }
+    const newEdge = {
+      ...params,
+      id: `${params.source}__${params.target}`,
+      markerEnd: { type: MarkerType.ArrowClosed },
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setEdges((eds: any) => addEdge(newEdge, eds));
     const { error } = await supabase.from("album_relations").insert({
       parent_id: params.source,
       child_id: params.target,
       sort_order: 0,
     });
-    if (error) { console.error("Insert failed:", error); return; }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setEdges((eds: any) => addEdge({ ...params, markerEnd: { type: MarkerType.ArrowClosed } }, eds));
+    if (error) console.error("Insert failed:", error);
   }, [setEdges]);
 
   const onEdgeClick = useCallback(async (_: React.MouseEvent, edge: Edge) => {
     if (!supabase) return;
-    const { error } = await supabase.from("album_relations")
-      .delete().eq("parent_id", edge.source).eq("child_id", edge.target);
-    if (error) { console.error("Delete failed:", error); return; }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setEdges((eds: any) => eds.filter((e: Edge) => e.id !== edge.id));
+    const { error } = await supabase.from("album_relations")
+      .delete().eq("parent_id", edge.source).eq("child_id", edge.target);
+    if (error) console.error("Delete failed:", error);
   }, [setEdges]);
 
   const onNodeDragStop = useCallback(async (_: React.MouseEvent, node: Node) => {
     if (!supabase) return;
-    await supabase.from("albums").update({ position_x: node.position.x, position_y: node.position.y }).eq("id", node.id);
+    await supabase.from("albums")
+      .update({ position_x: node.position.x, position_y: node.position.y })
+      .eq("id", node.id);
   }, []);
 
   const handleAutoLayout = useCallback(async () => {
@@ -141,13 +151,13 @@ export function AlbumNodeEditor() {
   }, [setNodes]);
 
   return (
-    <div className="h-[600px] bg-gray-50 rounded-lg border border-gray-200">
-      <div className="p-2 border-b border-gray-200 flex justify-end">
-        <button onClick={handleAutoLayout} className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded hover:bg-green-600 transition">
+    <div style={{ height: 600, background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+      <div style={{ padding: 8, borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end" }}>
+        <button onClick={handleAutoLayout} style={{ padding: "4px 12px", background: "#22c55e", color: "#fff", fontSize: 12, fontWeight: 700, borderRadius: 4, border: "none", cursor: "pointer" }}>
           Auto Layout
         </button>
       </div>
-      <div className="h-[550px]">
+      <div style={{ height: 550 }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -166,5 +176,13 @@ export function AlbumNodeEditor() {
         </ReactFlow>
       </div>
     </div>
+  );
+}
+
+export function AlbumNodeEditor() {
+  return (
+    <ReactFlowProvider>
+      <Flow />
+    </ReactFlowProvider>
   );
 }
