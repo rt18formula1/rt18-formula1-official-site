@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { LanguageProvider } from "@/components/providers/language-provider";
 import { Analytics } from "@vercel/analytics/next";
@@ -8,6 +9,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://rt18-formula1-official-site.vercel.app"
   ),
+  other: {
+    'google-site-verification': 'G-7V8FYG7SDB',
+  },
   title: "rt18_formula1",
   description:
     "rt18_formula1 Official Website - Exclusive Formula 1 fan art, illustrations, and the latest F1 news. Discover visual content celebrating motorsport.",
@@ -69,6 +73,18 @@ export default function RootLayout({
   return (
     <html lang="ja" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-white text-black">
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-7V8FYG7SDB"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-7V8FYG7SDB');
+          `}
+        </Script>
         <LanguageProvider>{children}</LanguageProvider>
         <Analytics />
         <SpeedInsights />
