@@ -6,7 +6,7 @@ Allow: /
 Disallow: /admin
 
 # Sitemap location
-Sitemap: https://rt18-formula1.manus.space/sitemap.xml
+Sitemap: https://rt18-formula1-official-site.vercel.app/sitemap.xml
 
 # Crawl delay (optional)
 Crawl-delay: 1
