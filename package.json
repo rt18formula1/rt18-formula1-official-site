@@ -13,6 +13,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1037.0",
     "@supabase/supabase-js": "^2.104.1",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "@xyflow/react": "^12.10.2",
     "autoprefixer": "^10.4.20",
     "date-fns": "^4.1.0",
