@@ -33,7 +33,7 @@ class JolpicaApiClient {
   async fetchRaceSchedule(year?: number): Promise<F1OfficialData> {
     try {
       const targetYear = year || new Date().getFullYear();
-      const response = await fetch(`/api/f1-jolpica?year=${targetYear}`);
+      const response = await fetch(`/api/f1-jolpica?year=${targetYear}&type=schedule`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -43,6 +43,40 @@ class JolpicaApiClient {
       return data;
     } catch (error) {
       console.error('Error fetching Jolpica race schedule:', error);
+      throw error;
+    }
+  }
+
+  async fetchDriverStandings(year?: number): Promise<any> {
+    try {
+      const targetYear = year || new Date().getFullYear();
+      const response = await fetch(`/api/f1-jolpica?year=${targetYear}&type=drivers`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching driver standings:', error);
+      throw error;
+    }
+  }
+
+  async fetchConstructorStandings(year?: number): Promise<any> {
+    try {
+      const targetYear = year || new Date().getFullYear();
+      const response = await fetch(`/api/f1-jolpica?year=${targetYear}&type=constructors`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching constructor standings:', error);
       throw error;
     }
   }

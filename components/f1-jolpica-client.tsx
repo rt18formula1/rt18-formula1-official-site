@@ -14,8 +14,11 @@ export default function F1JolpicaClient() {
   const [raceSchedule, setRaceSchedule] = useState<F1OfficialRace[]>([]);
   const [selectedRace, setSelectedRace] = useState<F1OfficialRace | null>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [activeTab, setActiveTab] = useState<'schedule' | 'details'>('schedule');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'details' | 'standings'>('schedule');
   const [apiStatus, setApiStatus] = useState<{ isAvailable: boolean; responseTime?: number; error?: string } | null>(null);
+  const [driverStandings, setDriverStandings] = useState<any>(null);
+  const [constructorStandings, setConstructorStandings] = useState<any>(null);
+  const [standingsLoading, setStandingsLoading] = useState(false);
 
   // 日付フォーマット関数
   const formatDate = (dateString: string) => {
@@ -94,6 +97,40 @@ export default function F1JolpicaClient() {
     }
   }, [selectedRace]);
 
+  // シーズンスタンディングスを取得
+  const fetchStandings = async () => {
+    try {
+      setStandingsLoading(true);
+      
+      // ドライバースタンディングスとコンストラクタースタンディングスを並列取得
+      const [driversData, constructorsData] = await Promise.all([
+        jolpicaApi.fetchDriverStandings(selectedYear),
+        jolpicaApi.fetchConstructorStandings(selectedYear)
+      ]);
+      
+      setDriverStandings(driversData);
+      setConstructorStandings(constructorsData);
+      
+      console.log(`Fetched standings for ${selectedYear}:`, {
+        drivers: driversData.data?.MRData?.StandingsTable?.Standings?.length || 0,
+        constructors: constructorsData.data?.MRData?.StandingsTable?.Standings?.length || 0
+      });
+      
+    } catch (error) {
+      console.error('Error fetching standings:', error);
+      // エラー時はnullのまま（UIで表示しない）
+    } finally {
+      setStandingsLoading(false);
+    }
+  };
+
+  // タブがstandingsに切り替わったときにスタンディングスを取得
+  useEffect(() => {
+    if (activeTab === 'standings' && (!driverStandings || !constructorStandings)) {
+      fetchStandings();
+    }
+  }, [activeTab, selectedYear]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -171,6 +208,19 @@ export default function F1JolpicaClient() {
               }`}
             >
               {language === 'ja' ? 'スケジュール' : 'Schedule'}
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('standings');
+                setSelectedRace(null);
+              }}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'standings'
+                  ? 'border-red-500 text-red-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {language === 'ja' ? 'シーズンリザルト' : 'Season Results'}
             </button>
             {selectedRace && (
               <button
@@ -348,6 +398,113 @@ export default function F1JolpicaClient() {
                 <p className="text-gray-500">
                   {language === 'ja' ? 'このレースはまだ開催されていません' : 'This race has not been held yet'}
                 </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* シーズンリザルトタブ */}
+        {activeTab === 'standings' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-black">
+              {selectedYear} {language === 'ja' ? 'シーズンリザルト' : 'Season Results'}
+            </h2>
+
+            {standingsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">
+                  {language === 'ja' ? 'シーズンリザルトを読み込み中...' : 'Loading season results...'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {/* ドライバースタンディングス */}
+                {driverStandings?.data?.MRData?.StandingsTable?.Standings && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 className="font-black text-lg mb-4">
+                      {language === 'ja' ? 'ドライバーランキング' : 'Driver Championship'}
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 px-3">Pos</th>
+                            <th className="text-left py-2 px-3">Driver</th>
+                            <th className="text-left py-2 px-3">Nationality</th>
+                            <th className="text-left py-2 px-3">Car</th>
+                            <th className="text-left py-2 px-3">Points</th>
+                            <th className="text-left py-2 px-3">Wins</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {driverStandings.data.MRData.StandingsTable.Standings.map((standing: any, index: number) => (
+                            <tr key={standing.Driver.driverId} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-2 px-3 font-medium">{standing.position}</td>
+                              <td className="py-2 px-3">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-medium">
+                                    {standing.Driver.givenName} {standing.Driver.familyName}
+                                  </span>
+                                  <span className="text-gray-500 text-xs">({standing.Driver.code})</span>
+                                </div>
+                              </td>
+                              <td className="py-2 px-3 text-gray-600">{standing.Driver.nationality}</td>
+                              <td className="py-2 px-3 text-gray-600">{standing.Constructors[0]?.name}</td>
+                              <td className="py-2 px-3 font-bold text-red-600">{standing.points}</td>
+                              <td className="py-2 px-3 text-gray-600">{standing.wins}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* コンストラクタースタンディングス */}
+                {constructorStandings?.data?.MRData?.StandingsTable?.Standings && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 className="font-black text-lg mb-4">
+                      {language === 'ja' ? 'チームランキング' : 'Constructor Championship'}
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 px-3">Pos</th>
+                            <th className="text-left py-2 px-3">Team</th>
+                            <th className="text-left py-2 px-3">Nationality</th>
+                            <th className="text-left py-2 px-3">Points</th>
+                            <th className="text-left py-2 px-3">Wins</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {constructorStandings.data.MRData.StandingsTable.Standings.map((standing: any) => (
+                            <tr key={standing.Constructor.constructorId} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-2 px-3 font-medium">{standing.position}</td>
+                              <td className="py-2 px-3 font-medium">{standing.Constructor.name}</td>
+                              <td className="py-2 px-3 text-gray-600">{standing.Constructor.nationality}</td>
+                              <td className="py-2 px-3 font-bold text-red-600">{standing.points}</td>
+                              <td className="py-2 px-3 text-gray-600">{standing.wins}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* データがない場合 */}
+                {!driverStandings?.data?.MRData?.StandingsTable?.Standings && 
+                 !constructorStandings?.data?.MRData?.StandingsTable?.Standings && (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <p className="text-gray-500">
+                      {language === 'ja' 
+                        ? 'このシーズンのリザルトデータはまだ利用できません' 
+                        : 'Season results data not yet available for this season'}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

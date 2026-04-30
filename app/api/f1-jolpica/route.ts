@@ -181,6 +181,30 @@ function convertJolpicaData(jolpicaData: JolpicaResponse, targetYear: number): F
   };
 }
 
+// ドライバースタンディングスを取得
+async function getDriverStandings(year: number): Promise<any> {
+  try {
+    console.log(`Fetching driver standings for year: ${year}`);
+    const response = await fetchFromJolpica(`/${year}/driverstandings.json?limit=100`);
+    return response;
+  } catch (error) {
+    console.error('Error fetching driver standings:', error);
+    throw error;
+  }
+}
+
+// コンストラクタースタンディングスを取得
+async function getConstructorStandings(year: number): Promise<any> {
+  try {
+    console.log(`Fetching constructor standings for year: ${year}`);
+    const response = await fetchFromJolpica(`/${year}/constructorstandings.json?limit=100`);
+    return response;
+  } catch (error) {
+    console.error('Error fetching constructor standings:', error);
+    throw error;
+  }
+}
+
 // 指定年のレーススケジュールを取得
 async function getRaceSchedule(year: number): Promise<F1OfficialData> {
   try {
@@ -226,16 +250,41 @@ async function getRaceSchedule(year: number): Promise<F1OfficialData> {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const year = searchParams.get('year');
+  const type = searchParams.get('type'); // 'schedule', 'drivers', 'constructors'
 
   try {
     const targetYear = year ? parseInt(year) : new Date().getFullYear();
     
-    console.log('Jolpica API request for year:', targetYear);
+    console.log('Jolpica API request for year:', targetYear, 'type:', type);
 
-    // Jolpica APIからデータ取得
-    const data = await getRaceSchedule(targetYear);
+    // リクエストタイプに応じてデータを取得
+    switch (type) {
+      case 'drivers':
+        const driverStandings = await getDriverStandings(targetYear);
+        return NextResponse.json({
+          season: targetYear,
+          type: 'driverStandings',
+          data: driverStandings,
+          _scraped: true,
+          _fallback: false
+        });
 
-    return NextResponse.json(data);
+      case 'constructors':
+        const constructorStandings = await getConstructorStandings(targetYear);
+        return NextResponse.json({
+          season: targetYear,
+          type: 'constructorStandings',
+          data: constructorStandings,
+          _scraped: true,
+          _fallback: false
+        });
+
+      case 'schedule':
+      default:
+        // Jolpica APIからデータ取得
+        const data = await getRaceSchedule(targetYear);
+        return NextResponse.json(data);
+    }
 
   } catch (error) {
     console.error('Jolpica API error:', error);
