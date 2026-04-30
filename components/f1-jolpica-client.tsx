@@ -15,6 +15,7 @@ export default function F1JolpicaClient() {
   const [selectedRace, setSelectedRace] = useState<F1OfficialRace | null>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<'schedule' | 'details' | 'standings'>('schedule');
+  const [standingsTab, setStandingsTab] = useState<'drivers' | 'constructors'>('drivers');
   const [apiStatus, setApiStatus] = useState<{ isAvailable: boolean; responseTime?: number; error?: string } | null>(null);
   const [driverStandings, setDriverStandings] = useState<any>(null);
   const [constructorStandings, setConstructorStandings] = useState<any>(null);
@@ -410,6 +411,32 @@ export default function F1JolpicaClient() {
               {selectedYear} {language === 'ja' ? 'シーズンリザルト' : 'Season Results'}
             </h2>
 
+            {/* サブタブナビゲーション */}
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setStandingsTab('drivers')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    standingsTab === 'drivers'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {language === 'ja' ? 'ドライバーランキング' : 'Driver Championship'}
+                </button>
+                <button
+                  onClick={() => setStandingsTab('constructors')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    standingsTab === 'constructors'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {language === 'ja' ? 'チームランキング' : 'Constructor Championship'}
+                </button>
+              </nav>
+            </div>
+
             {standingsLoading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
@@ -418,83 +445,99 @@ export default function F1JolpicaClient() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-8">
-                {/* ドライバースタンディングス */}
-                {driverStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings && (
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h3 className="font-black text-lg mb-4">
-                      {language === 'ja' ? 'ドライバーランキング' : 'Driver Championship'}
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 px-3">Pos</th>
-                            <th className="text-left py-2 px-3">Driver</th>
-                            <th className="text-left py-2 px-3">Nationality</th>
-                            <th className="text-left py-2 px-3">Car</th>
-                            <th className="text-left py-2 px-3">Points</th>
-                            <th className="text-left py-2 px-3">Wins</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {driverStandings.data.MRData.StandingsTable.StandingsLists[0].DriverStandings.map((standing: any, index: number) => (
-                            <tr key={standing.Driver.driverId} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-2 px-3 font-medium">{standing.position}</td>
-                              <td className="py-2 px-3">
-                                <div className="flex items-center space-x-2">
-                                  <span className="font-medium">
-                                    {standing.Driver.givenName} {standing.Driver.familyName}
-                                  </span>
-                                  <span className="text-gray-500 text-xs">({standing.Driver.code})</span>
-                                </div>
-                              </td>
-                              <td className="py-2 px-3 text-gray-600">{standing.Driver.nationality}</td>
-                              <td className="py-2 px-3 text-gray-600">{standing.Constructors[0]?.name}</td>
-                              <td className="py-2 px-3 font-bold text-red-600">{standing.points}</td>
-                              <td className="py-2 px-3 text-gray-600">{standing.wins}</td>
+              <div>
+                {/* Driver Championshipタブ */}
+                {standingsTab === 'drivers' && (
+                  driverStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings && 
+                  driverStandings.data.MRData.StandingsTable.StandingsLists[0].DriverStandings.length > 0 ? (
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-200">
+                              <th className="text-left py-2 px-3">Pos</th>
+                              <th className="text-left py-2 px-3">Driver</th>
+                              <th className="text-left py-2 px-3">Nationality</th>
+                              <th className="text-left py-2 px-3">Car</th>
+                              <th className="text-left py-2 px-3">Points</th>
+                              <th className="text-left py-2 px-3">Wins</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {driverStandings.data.MRData.StandingsTable.StandingsLists[0].DriverStandings.map((standing: any, index: number) => (
+                              <tr key={standing.Driver.driverId} className="border-b border-gray-100 hover:bg-gray-50">
+                                <td className="py-2 px-3 font-medium">{standing.position}</td>
+                                <td className="py-2 px-3">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="font-medium">
+                                      {standing.Driver.givenName} {standing.Driver.familyName}
+                                    </span>
+                                    <span className="text-gray-500 text-xs">({standing.Driver.code})</span>
+                                  </div>
+                                </td>
+                                <td className="py-2 px-3 text-gray-600">{standing.Driver.nationality}</td>
+                                <td className="py-2 px-3 text-gray-600">{standing.Constructors[0]?.name}</td>
+                                <td className="py-2 px-3 font-bold text-red-600">{standing.points}</td>
+                                <td className="py-2 px-3 text-gray-600">{standing.wins}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg">
+                      <p className="text-gray-500">
+                        {language === 'ja' 
+                          ? 'ドライバーランキングデータがありません' 
+                          : 'No driver championship data available'}
+                      </p>
+                    </div>
+                  )
                 )}
 
-                {/* コンストラクタースタンディングス */}
-                {constructorStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings && (
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h3 className="font-black text-lg mb-4">
-                      {language === 'ja' ? 'チームランキング' : 'Constructor Championship'}
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 px-3">Pos</th>
-                            <th className="text-left py-2 px-3">Team</th>
-                            <th className="text-left py-2 px-3">Nationality</th>
-                            <th className="text-left py-2 px-3">Points</th>
-                            <th className="text-left py-2 px-3">Wins</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {constructorStandings.data.MRData.StandingsTable.StandingsLists[0].ConstructorStandings.map((standing: any) => (
-                            <tr key={standing.Constructor.constructorId} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-2 px-3 font-medium">{standing.position}</td>
-                              <td className="py-2 px-3 font-medium">{standing.Constructor.name}</td>
-                              <td className="py-2 px-3 text-gray-600">{standing.Constructor.nationality}</td>
-                              <td className="py-2 px-3 font-bold text-red-600">{standing.points}</td>
-                              <td className="py-2 px-3 text-gray-600">{standing.wins}</td>
+                {/* Constructor Championshipタブ */}
+                {standingsTab === 'constructors' && (
+                  constructorStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings && 
+                  constructorStandings.data.MRData.StandingsTable.StandingsLists[0].ConstructorStandings.length > 0 ? (
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-200">
+                              <th className="text-left py-2 px-3">Pos</th>
+                              <th className="text-left py-2 px-3">Team</th>
+                              <th className="text-left py-2 px-3">Nationality</th>
+                              <th className="text-left py-2 px-3">Points</th>
+                              <th className="text-left py-2 px-3">Wins</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {constructorStandings.data.MRData.StandingsTable.StandingsLists[0].ConstructorStandings.map((standing: any) => (
+                              <tr key={standing.Constructor.constructorId} className="border-b border-gray-100 hover:bg-gray-50">
+                                <td className="py-2 px-3 font-medium">{standing.position}</td>
+                                <td className="py-2 px-3 font-medium">{standing.Constructor.name}</td>
+                                <td className="py-2 px-3 text-gray-600">{standing.Constructor.nationality}</td>
+                                <td className="py-2 px-3 font-bold text-red-600">{standing.points}</td>
+                                <td className="py-2 px-3 text-gray-600">{standing.wins}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg">
+                      <p className="text-gray-500">
+                        {language === 'ja' 
+                          ? 'チームランキングデータがありません' 
+                          : 'No constructor championship data available'}
+                      </p>
+                    </div>
+                  )
                 )}
 
-                {/* データがない場合 */}
+                {/* 両方のデータがない場合 */}
                 {(!driverStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || 
                   driverStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings.length === 0) && 
                  (!constructorStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings || 
