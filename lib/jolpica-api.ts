@@ -81,6 +81,107 @@ class JolpicaApiClient {
     }
   }
 
+  async fetchQualifyingResults(year?: number, round?: number): Promise<any> {
+    try {
+      const targetYear = year || new Date().getFullYear();
+      const url = round 
+        ? `/api/f1-jolpica?year=${targetYear}&round=${round}&type=qualifying`
+        : `/api/f1-jolpica?year=${targetYear}&type=qualifying`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching qualifying results:', error);
+      throw error;
+    }
+  }
+
+  async fetchCircuits(): Promise<any> {
+    try {
+      const response = await fetch('/api/f1-jolpica?type=circuits');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching circuits:', error);
+      throw error;
+    }
+  }
+
+  async fetchDrivers(): Promise<any> {
+    try {
+      const response = await fetch('/api/f1-jolpica?type=drivers-info');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      throw error;
+    }
+  }
+
+  async fetchConstructors(): Promise<any> {
+    try {
+      const response = await fetch('/api/f1-jolpica?type=constructors-info');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching constructors:', error);
+      throw error;
+    }
+  }
+
+  async fetchLapTimes(year: number, round: number): Promise<any> {
+    try {
+      const response = await fetch(`/api/f1-jolpica?year=${year}&round=${round}&type=laps`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching lap times:', error);
+      throw error;
+    }
+  }
+
+  async fetchPitStops(year: number, round: number): Promise<any> {
+    try {
+      const response = await fetch(`/api/f1-jolpica?year=${year}&round=${round}&type=pitstops`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching pit stops:', error);
+      throw error;
+    }
+  }
+
   async getRace(year: number, round: number): Promise<F1OfficialRace | null> {
     try {
       const data = await this.fetchRaceSchedule(year);

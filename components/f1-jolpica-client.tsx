@@ -14,12 +14,22 @@ export default function F1JolpicaClient() {
   const [raceSchedule, setRaceSchedule] = useState<F1OfficialRace[]>([]);
   const [selectedRace, setSelectedRace] = useState<F1OfficialRace | null>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [activeTab, setActiveTab] = useState<'schedule' | 'details' | 'standings'>('schedule');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'details' | 'standings' | 'alldata'>('schedule');
   const [standingsTab, setStandingsTab] = useState<'drivers' | 'constructors'>('drivers');
+  const [allDataTab, setAllDataTab] = useState<'qualifying' | 'circuits' | 'drivers' | 'constructors' | 'laps' | 'pitstops'>('qualifying');
   const [apiStatus, setApiStatus] = useState<{ isAvailable: boolean; responseTime?: number; error?: string } | null>(null);
   const [driverStandings, setDriverStandings] = useState<any>(null);
   const [constructorStandings, setConstructorStandings] = useState<any>(null);
   const [standingsLoading, setStandingsLoading] = useState(false);
+  
+  // 全データ表示用の状態
+  const [qualifyingData, setQualifyingData] = useState<any>(null);
+  const [circuitsData, setCircuitsData] = useState<any>(null);
+  const [driversData, setDriversData] = useState<any>(null);
+  const [constructorsData, setConstructorsData] = useState<any>(null);
+  const [lapsData, setLapsData] = useState<any>(null);
+  const [pitstopsData, setPitstopsData] = useState<any>(null);
+  const [allDataLoading, setAllDataLoading] = useState(false);
 
   // 日付フォーマット関数
   const formatDate = (dateString: string) => {
@@ -132,6 +142,78 @@ export default function F1JolpicaClient() {
     }
   }, [activeTab, selectedYear]);
 
+  // 全データを取得
+  const fetchAllData = async () => {
+    try {
+      setAllDataLoading(true);
+      
+      // 並列で全データを取得
+      const [
+        qualifying,
+        circuits,
+        drivers,
+        constructors
+      ] = await Promise.all([
+        jolpicaApi.fetchQualifyingResults(selectedYear),
+        jolpicaApi.fetchCircuits(),
+        jolpicaApi.fetchDrivers(),
+        jolpicaApi.fetchConstructors()
+      ]);
+      
+      setQualifyingData(qualifying);
+      setCircuitsData(circuits);
+      setDriversData(drivers);
+      setConstructorsData(constructors);
+      
+      // ラップタイムとピットストップは選択されたレースがある場合のみ取得
+      if (selectedRace) {
+        try {
+          const [laps, pitstops] = await Promise.all([
+            jolpicaApi.fetchLapTimes(selectedYear, selectedRace.round),
+            jolpicaApi.fetchPitStops(selectedYear, selectedRace.round)
+          ]);
+          setLapsData(laps);
+          setPitstopsData(pitstops);
+        } catch (error) {
+          console.log('Lap times and pit stops not available for this race');
+        }
+      }
+      
+      console.log(`Fetched all Jolpica data for ${selectedYear}`);
+      
+    } catch (error) {
+      console.error('Error fetching all data:', error);
+    } finally {
+      setAllDataLoading(false);
+    }
+  };
+
+  // タブがalldataに切り替わったときに全データを取得
+  useEffect(() => {
+    if (activeTab === 'alldata') {
+      fetchAllData();
+    }
+  }, [activeTab, selectedYear]);
+
+  // レースが選択されたときにラップタイムとピットストップを再取得
+  useEffect(() => {
+    if (activeTab === 'alldata' && selectedRace) {
+      const fetchRaceSpecificData = async () => {
+        try {
+          const [laps, pitstops] = await Promise.all([
+            jolpicaApi.fetchLapTimes(selectedYear, selectedRace.round),
+            jolpicaApi.fetchPitStops(selectedYear, selectedRace.round)
+          ]);
+          setLapsData(laps);
+          setPitstopsData(pitstops);
+        } catch (error) {
+          console.log('Lap times and pit stops not available for this race');
+        }
+      };
+      fetchRaceSpecificData();
+    }
+  }, [selectedRace, activeTab, selectedYear]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -222,6 +304,19 @@ export default function F1JolpicaClient() {
               }`}
             >
               {language === 'ja' ? 'シーズンリザルト' : 'Season Results'}
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('alldata');
+                setSelectedRace(null);
+              }}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'alldata'
+                  ? 'border-red-500 text-red-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {language === 'ja' ? '全データ' : 'All Data'}
             </button>
             {selectedRace && (
               <button
@@ -552,6 +647,295 @@ export default function F1JolpicaClient() {
                       {language === 'ja' 
                         ? 'レースが開始されるとデータが表示されます' 
                         : 'Data will be displayed once races begin'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 全データタブ */}
+        {activeTab === 'alldata' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-black">
+              {selectedYear} {language === 'ja' ? 'Jolpica API 全データ' : 'Jolpica API All Data'}
+            </h2>
+
+            {/* サブタブナビゲーション */}
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setAllDataTab('qualifying')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    allDataTab === 'qualifying'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {language === 'ja' ? '予選結果' : 'Qualifying'}
+                </button>
+                <button
+                  onClick={() => setAllDataTab('circuits')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    allDataTab === 'circuits'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {language === 'ja' ? 'サーキット' : 'Circuits'}
+                </button>
+                <button
+                  onClick={() => setAllDataTab('drivers')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    allDataTab === 'drivers'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {language === 'ja' ? 'ドライバー' : 'Drivers'}
+                </button>
+                <button
+                  onClick={() => setAllDataTab('constructors')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    allDataTab === 'constructors'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {language === 'ja' ? 'コンストラクター' : 'Constructors'}
+                </button>
+                {selectedRace && (
+                  <>
+                    <button
+                      onClick={() => setAllDataTab('laps')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        allDataTab === 'laps'
+                          ? 'border-red-500 text-red-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      {language === 'ja' ? 'ラップタイム' : 'Lap Times'}
+                    </button>
+                    <button
+                      onClick={() => setAllDataTab('pitstops')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        allDataTab === 'pitstops'
+                          ? 'border-red-500 text-red-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      {language === 'ja' ? 'ピットストップ' : 'Pit Stops'}
+                    </button>
+                  </>
+                )}
+              </nav>
+            </div>
+
+            {allDataLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">
+                  {language === 'ja' ? '全データを読み込み中...' : 'Loading all data...'}
+                </p>
+              </div>
+            ) : (
+              <div>
+                {/* 予選結果 */}
+                {allDataTab === 'qualifying' && qualifyingData?.data?.MRData?.RaceTable?.Races && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 className="font-black text-lg mb-4">
+                      {language === 'ja' ? '予選結果' : 'Qualifying Results'}
+                    </h3>
+                    <div className="space-y-6">
+                      {qualifyingData.data.MRData.RaceTable.Races.map((race: any) => (
+                        <div key={`${race.season}-${race.round}`} className="border-b border-gray-200 pb-4">
+                          <h4 className="font-semibold mb-2">{race.raceName}</h4>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-gray-200">
+                                  <th className="text-left py-2 px-3">Pos</th>
+                                  <th className="text-left py-2 px-3">Driver</th>
+                                  <th className="text-left py-2 px-3">Team</th>
+                                  <th className="text-left py-2 px-3">Q1</th>
+                                  <th className="text-left py-2 px-3">Q2</th>
+                                  <th className="text-left py-2 px-3">Q3</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {race.QualifyingResults?.slice(0, 10).map((result: any) => (
+                                  <tr key={result.Driver.driverId} className="border-b border-gray-100 hover:bg-gray-50">
+                                    <td className="py-2 px-3 font-medium">{result.position}</td>
+                                    <td className="py-2 px-3">
+                                      {result.Driver.givenName} {result.Driver.familyName}
+                                    </td>
+                                    <td className="py-2 px-3">{result.Constructor.name}</td>
+                                    <td className="py-2 px-3">{result.Q1 || '-'}</td>
+                                    <td className="py-2 px-3">{result.Q2 || '-'}</td>
+                                    <td className="py-2 px-3">{result.Q3 || '-'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* サーキット情報 */}
+                {allDataTab === 'circuits' && circuitsData?.data?.MRData?.CircuitTable?.Circuits && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 className="font-black text-lg mb-4">
+                      {language === 'ja' ? 'サーキット情報' : 'Circuit Information'}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {circuitsData.data.MRData.CircuitTable.Circuits.map((circuit: any) => (
+                        <div key={circuit.circuitId} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                          <h4 className="font-semibold mb-2">{circuit.circuitName}</h4>
+                          <p className="text-sm text-gray-600">
+                            {circuit.Location?.locality}, {circuit.Location?.country}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ドライバー情報 */}
+                {allDataTab === 'drivers' && driversData?.data?.MRData?.DriverTable?.Drivers && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 className="font-black text-lg mb-4">
+                      {language === 'ja' ? 'ドライバー情報' : 'Driver Information'}
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 px-3">Name</th>
+                            <th className="text-left py-2 px-3">Code</th>
+                            <th className="text-left py-2 px-3">Number</th>
+                            <th className="text-left py-2 px-3">Nationality</th>
+                            <th className="text-left py-2 px-3">DOB</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {driversData.data.MRData.DriverTable.Drivers.map((driver: any) => (
+                            <tr key={driver.driverId} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-2 px-3">
+                                {driver.givenName} {driver.familyName}
+                              </td>
+                              <td className="py-2 px-3">{driver.code || '-'}</td>
+                              <td className="py-2 px-3">{driver.permanentNumber || '-'}</td>
+                              <td className="py-2 px-3">{driver.nationality}</td>
+                              <td className="py-2 px-3">{driver.dateOfBirth}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* コンストラクター情報 */}
+                {allDataTab === 'constructors' && constructorsData?.data?.MRData?.ConstructorTable?.Constructors && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 className="font-black text-lg mb-4">
+                      {language === 'ja' ? 'コンストラクター情報' : 'Constructor Information'}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {constructorsData.data.MRData.ConstructorTable.Constructors.map((constructor: any) => (
+                        <div key={constructor.constructorId} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                          <h4 className="font-semibold mb-2">{constructor.name}</h4>
+                          <p className="text-sm text-gray-600">{constructor.nationality}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ラップタイム */}
+                {allDataTab === 'laps' && lapsData?.data?.MRData?.RaceTable?.Races?.[0]?.Laps && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 className="font-black text-lg mb-4">
+                      {language === 'ja' ? 'ラップタイム' : 'Lap Times'}
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 px-3">Lap</th>
+                            <th className="text-left py-2 px-3">Driver</th>
+                            <th className="text-left py-2 px-3">Time</th>
+                            <th className="text-left py-2 px-3">Position</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lapsData.data.MRData.RaceTable.Races[0].Laps.slice(0, 20).map((lap: any) => (
+                            <tr key={lap.number} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-2 px-3">{lap.number}</td>
+                              <td className="py-2 px-3">
+                                {lap.Timings.map((timing: any) => (
+                                  <div key={timing.driverId} className="text-xs">
+                                    {timing.driverId}: {timing.time}
+                                  </div>
+                                ))}
+                              </td>
+                              <td className="py-2 px-3">-</td>
+                              <td className="py-2 px-3">-</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ピットストップ */}
+                {allDataTab === 'pitstops' && pitstopsData?.data?.MRData?.RaceTable?.Races?.[0]?.PitStops && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 className="font-black text-lg mb-4">
+                      {language === 'ja' ? 'ピットストップ' : 'Pit Stops'}
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 px-3">Driver</th>
+                            <th className="text-left py-2 px-3">Lap</th>
+                            <th className="text-left py-2 px-3">Time</th>
+                            <th className="text-left py-2 px-3">Duration</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pitstopsData.data.MRData.RaceTable.Races[0].PitStops.map((pitstop: any) => (
+                            <tr key={`${pitstop.driverId}-${pitstop.lap}`} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-2 px-3">{pitstop.driverId}</td>
+                              <td className="py-2 px-3">{pitstop.lap}</td>
+                              <td className="py-2 px-3">{pitstop.time}</td>
+                              <td className="py-2 px-3">{pitstop.duration}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* データがない場合 */}
+                {((allDataTab === 'qualifying' && !qualifyingData?.data?.MRData?.RaceTable?.Races) ||
+                  (allDataTab === 'circuits' && !circuitsData?.data?.MRData?.CircuitTable?.Circuits) ||
+                  (allDataTab === 'drivers' && !driversData?.data?.MRData?.DriverTable?.Drivers) ||
+                  (allDataTab === 'constructors' && !constructorsData?.data?.MRData?.ConstructorTable?.Constructors) ||
+                  (allDataTab === 'laps' && !lapsData?.data?.MRData?.RaceTable?.Races?.[0]?.Laps) ||
+                  (allDataTab === 'pitstops' && !pitstopsData?.data?.MRData?.RaceTable?.Races?.[0]?.PitStops)) && (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <p className="text-gray-500">
+                      {language === 'ja' 
+                        ? 'データがありません' 
+                        : 'No data available'}
                     </p>
                   </div>
                 )}

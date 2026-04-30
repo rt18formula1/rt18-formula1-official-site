@@ -207,6 +207,79 @@ async function getConstructorStandings(year: number): Promise<any> {
   }
 }
 
+// 予選結果を取得
+async function getQualifyingResults(year: number, round?: number): Promise<any> {
+  try {
+    const endpoint = round ? `/${year}/${round}/qualifying.json?limit=100` : `/${year}/qualifying.json?limit=100`;
+    console.log(`Fetching qualifying results for year: ${year}, round: ${round || 'all'}`);
+    const response = await fetchFromJolpica(endpoint);
+    return response;
+  } catch (error) {
+    console.error('Error fetching qualifying results:', error);
+    throw error;
+  }
+}
+
+// サーキット情報を取得
+async function getCircuits(): Promise<any> {
+  try {
+    console.log('Fetching circuits information');
+    const response = await fetchFromJolpica('/circuits.json?limit=100');
+    return response;
+  } catch (error) {
+    console.error('Error fetching circuits:', error);
+    throw error;
+  }
+}
+
+// ドライバー情報を取得
+async function getDrivers(): Promise<any> {
+  try {
+    console.log('Fetching drivers information');
+    const response = await fetchFromJolpica('/drivers.json?limit=100');
+    return response;
+  } catch (error) {
+    console.error('Error fetching drivers:', error);
+    throw error;
+  }
+}
+
+// コンストラクター情報を取得
+async function getConstructors(): Promise<any> {
+  try {
+    console.log('Fetching constructors information');
+    const response = await fetchFromJolpica('/constructors.json?limit=100');
+    return response;
+  } catch (error) {
+    console.error('Error fetching constructors:', error);
+    throw error;
+  }
+}
+
+// ラップタイムを取得
+async function getLapTimes(year: number, round: number): Promise<any> {
+  try {
+    console.log(`Fetching lap times for year: ${year}, round: ${round}`);
+    const response = await fetchFromJolpica(`/${year}/${round}/laps.json?limit=100`);
+    return response;
+  } catch (error) {
+    console.error('Error fetching lap times:', error);
+    throw error;
+  }
+}
+
+// ピットストップを取得
+async function getPitStops(year: number, round: number): Promise<any> {
+  try {
+    console.log(`Fetching pit stops for year: ${year}, round: ${round}`);
+    const response = await fetchFromJolpica(`/${year}/${round}/pitstops.json?limit=100`);
+    return response;
+  } catch (error) {
+    console.error('Error fetching pit stops:', error);
+    throw error;
+  }
+}
+
 // フォールバック用のドライバースタンディングスデータ
 function getFallbackDriverStandings(year: number): any {
   if (year === 2025) {
@@ -566,12 +639,14 @@ async function getRaceSchedule(year: number): Promise<F1OfficialData> {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const year = searchParams.get('year');
-  const type = searchParams.get('type'); // 'schedule', 'drivers', 'constructors'
+  const type = searchParams.get('type'); // 'schedule', 'drivers', 'constructors', 'qualifying', 'circuits', 'drivers-info', 'constructors-info', 'laps', 'pitstops'
+  const round = searchParams.get('round');
 
   try {
     const targetYear = year ? parseInt(year) : new Date().getFullYear();
+    const targetRound = round ? parseInt(round) : undefined;
     
-    console.log('Jolpica API request for year:', targetYear, 'type:', type);
+    console.log('Jolpica API request for year:', targetYear, 'type:', type, 'round:', targetRound);
 
     // リクエストタイプに応じてデータを取得
     switch (type) {
@@ -591,6 +666,78 @@ export async function GET(request: Request) {
           season: targetYear,
           type: 'constructorStandings',
           data: constructorStandings,
+          _scraped: true,
+          _fallback: false
+        });
+
+      case 'qualifying':
+        const qualifyingResults = await getQualifyingResults(targetYear, targetRound);
+        return NextResponse.json({
+          season: targetYear,
+          round: targetRound,
+          type: 'qualifying',
+          data: qualifyingResults,
+          _scraped: true,
+          _fallback: false
+        });
+
+      case 'circuits':
+        const circuits = await getCircuits();
+        return NextResponse.json({
+          type: 'circuits',
+          data: circuits,
+          _scraped: true,
+          _fallback: false
+        });
+
+      case 'drivers-info':
+        const drivers = await getDrivers();
+        return NextResponse.json({
+          type: 'drivers',
+          data: drivers,
+          _scraped: true,
+          _fallback: false
+        });
+
+      case 'constructors-info':
+        const constructors = await getConstructors();
+        return NextResponse.json({
+          type: 'constructors',
+          data: constructors,
+          _scraped: true,
+          _fallback: false
+        });
+
+      case 'laps':
+        if (!targetRound) {
+          return NextResponse.json(
+            { error: 'Round parameter is required for lap times' },
+            { status: 400 }
+          );
+        }
+        const lapTimes = await getLapTimes(targetYear, targetRound);
+        return NextResponse.json({
+          season: targetYear,
+          round: targetRound,
+          type: 'laps',
+          data: lapTimes,
+          _scraped: true,
+          _fallback: false
+        });
+
+      case 'pitstops':
+        if (!targetRound) {
+          return NextResponse.json(
+            { error: 'Round parameter is required for pit stops' },
+            { status: 400 }
+          );
+        }
+        const pitStops = await getPitStops(targetYear, targetRound);
+        return NextResponse.json({
+          season: targetYear,
+          round: targetRound,
+          type: 'pitstops',
+          data: pitStops,
           _scraped: true,
           _fallback: false
         });
