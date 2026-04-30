@@ -182,6 +182,22 @@ class JolpicaApiClient {
     }
   }
 
+  async fetchSessionResults(year: number, round: number, session: string): Promise<any> {
+    try {
+      const response = await fetch(`/api/f1-jolpica?year=${year}&round=${round}&session=${session}&type=session`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching session results:', error);
+      throw error;
+    }
+  }
+
   async getRace(year: number, round: number): Promise<F1OfficialRace | null> {
     try {
       const data = await this.fetchRaceSchedule(year);

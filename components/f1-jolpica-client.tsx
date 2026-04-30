@@ -17,6 +17,7 @@ export default function F1JolpicaClient() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'details' | 'standings' | 'alldata'>('schedule');
   const [standingsTab, setStandingsTab] = useState<'drivers' | 'constructors'>('drivers');
   const [allDataTab, setAllDataTab] = useState<'qualifying' | 'circuits' | 'drivers' | 'constructors' | 'laps' | 'pitstops'>('qualifying');
+  const [raceSessionTab, setRaceSessionTab] = useState<'fp1' | 'fp2' | 'fp3' | 'sprint-qualifying' | 'sprint' | 'qualifying' | 'race'>('race');
   const [apiStatus, setApiStatus] = useState<{ isAvailable: boolean; responseTime?: number; error?: string } | null>(null);
   const [driverStandings, setDriverStandings] = useState<any>(null);
   const [constructorStandings, setConstructorStandings] = useState<any>(null);
@@ -30,6 +31,10 @@ export default function F1JolpicaClient() {
   const [lapsData, setLapsData] = useState<any>(null);
   const [pitstopsData, setPitstopsData] = useState<any>(null);
   const [allDataLoading, setAllDataLoading] = useState(false);
+  
+  // セッションデータ用の状態
+  const [sessionData, setSessionData] = useState<any>(null);
+  const [sessionLoading, setSessionLoading] = useState(false);
 
   // 日付フォーマット関数
   const formatDate = (dateString: string) => {
@@ -214,6 +219,45 @@ export default function F1JolpicaClient() {
     }
   }, [selectedRace, activeTab, selectedYear]);
 
+  // セッションデータを取得
+  const fetchSessionData = async () => {
+    if (!selectedRace) return;
+    
+    try {
+      setSessionLoading(true);
+      
+      const sessionResults = await jolpicaApi.fetchSessionResults(
+        selectedYear, 
+        selectedRace.round, 
+        raceSessionTab
+      );
+      
+      setSessionData(sessionResults);
+      
+      console.log(`Fetched ${raceSessionTab} data for ${selectedRace.name}`);
+      
+    } catch (error) {
+      console.error(`Error fetching ${raceSessionTab} data:`, error);
+      setSessionData(null);
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  // レースが選択されたときにセッションデータを取得
+  useEffect(() => {
+    if (selectedRace && activeTab === 'details') {
+      fetchSessionData();
+    }
+  }, [selectedRace, activeTab, selectedYear]);
+
+  // セッションタブが切り替わったときにデータを再取得
+  useEffect(() => {
+    if (selectedRace && activeTab === 'details') {
+      fetchSessionData();
+    }
+  }, [raceSessionTab]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -387,113 +431,224 @@ export default function F1JolpicaClient() {
         {activeTab === 'details' && selectedRace && (
           <div className="space-y-6">
             <h2 className="text-2xl font-black">
-              {selectedRace.name} - {language === 'ja' ? 'レース詳細' : 'Race Details'}
+              {selectedRace.name} - {selectedYear}
             </h2>
-            
-            {/* レース基本情報 */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-black text-lg mb-4">{selectedRace.name}</h3>
-                  <div className="space-y-2">
-                    <p className="text-gray-600">
-                      <span className="font-medium">{language === 'ja' ? 'ラウンド:' : 'Round:'}</span> {selectedRace.round}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">{language === 'ja' ? '場所:' : 'Location:'}</span> {selectedRace.location}, {selectedRace.country}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">{language === 'ja' ? '日付:' : 'Date:'}</span> {formatDate(selectedRace.date)}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">{language === 'ja' ? 'サーキット情報' : 'Circuit Info'}</h4>
-                  <p className="text-gray-600">{selectedRace.location}</p>
-                  <p className="text-gray-600">{selectedRace.country}</p>
-                </div>
-              </div>
-              <div className="mt-6">
-                <a
-                  href={selectedRace.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-red-600 hover:text-red-700 font-medium"
+
+            {/* セッション選択サブタブ */}
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setRaceSessionTab('fp1')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    raceSessionTab === 'fp1'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
                 >
-                  {language === 'ja' ? '詳細を見る' : 'View Details'} →
-                </a>
-              </div>
+                  FP1
+                </button>
+                <button
+                  onClick={() => setRaceSessionTab('fp2')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    raceSessionTab === 'fp2'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  FP2
+                </button>
+                <button
+                  onClick={() => setRaceSessionTab('fp3')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    raceSessionTab === 'fp3'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  FP3
+                </button>
+                <button
+                  onClick={() => setRaceSessionTab('qualifying')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    raceSessionTab === 'qualifying'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {language === 'ja' ? '予選' : 'Qualifying'}
+                </button>
+                <button
+                  onClick={() => setRaceSessionTab('sprint-qualifying')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    raceSessionTab === 'sprint-qualifying'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {language === 'ja' ? 'スプリント予選' : 'Sprint Qualifying'}
+                </button>
+                <button
+                  onClick={() => setRaceSessionTab('sprint')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    raceSessionTab === 'sprint'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {language === 'ja' ? 'スプリント' : 'Sprint'}
+                </button>
+                <button
+                  onClick={() => setRaceSessionTab('race')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    raceSessionTab === 'race'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {language === 'ja' ? 'レース' : 'Race'}
+                </button>
+              </nav>
             </div>
 
-            {/* レース結果 */}
-            <h3 className="text-xl font-black mb-4">
-              {language === 'ja' ? 'レース結果' : 'Race Results'}
-            </h3>
-            
-            {selectedRace.results && selectedRace.results.length > 0 ? (
-              <div className="space-y-4">
-                {/* 表彰台 */}
-                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 rounded-lg">
-                  <h4 className="font-black text-lg mb-4">
-                    {language === 'ja' ? '表彰台' : 'Podium'}
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {selectedRace.results.slice(0, 3).map((result, index) => (
-                      <div key={result.position} className="text-center">
-                        <div className="text-4xl mb-2">
-                          {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
-                        </div>
-                        <div className="font-black text-lg">{result.name}</div>
-                        <div className="text-sm text-gray-600">{result.code}</div>
-                        <div className="text-sm font-medium">{result.time}</div>
-                        <div className="text-xs text-gray-500">{result.team}</div>
-                        <div className="text-xs font-medium text-gray-700">{result.points} pts</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 完全な結果リスト */}
-                <div className="bg-gray-50 p-6 rounded-lg">
-                  <h4 className="font-black text-lg mb-4">
-                    {language === 'ja' ? '完全な結果' : 'Full Results'}
-                  </h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-2 px-3">Pos</th>
-                          <th className="text-left py-2 px-3">Driver</th>
-                          <th className="text-left py-2 px-3">Team</th>
-                          <th className="text-left py-2 px-3">Time</th>
-                          <th className="text-left py-2 px-3">Points</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedRace.results.map((result) => (
-                          <tr key={result.position} className="border-b border-gray-100 hover:bg-gray-100">
-                            <td className="py-2 px-3 font-medium">{result.position}</td>
-                            <td className="py-2 px-3">
-                              <div className="flex items-center space-x-2">
-                                <span className="font-medium">{result.name}</span>
-                                <span className="text-gray-500 text-xs">({result.code})</span>
-                              </div>
-                            </td>
-                            <td className="py-2 px-3 text-gray-600">{result.team}</td>
-                            <td className="py-2 px-3 text-gray-600">{result.time}</td>
-                            <td className="py-2 px-3 font-medium">{result.points}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+            {sessionLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">
+                  {language === 'ja' ? 'セッションデータを読み込み中...' : 'Loading session data...'}
+                </p>
               </div>
             ) : (
-              <div className="text-center py-8 bg-gray-50 rounded-lg">
-                <p className="text-gray-500">
-                  {language === 'ja' ? 'このレースはまだ開催されていません' : 'This race has not been held yet'}
-                </p>
+              <div>
+                {/* セッションデータ表示 */}
+                {sessionData?.data?.MRData?.RaceTable?.Races?.[0] && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 className="font-black text-lg mb-4">
+                      {raceSessionTab === 'fp1' && (language === 'ja' ? 'フリー practice 1' : 'Free Practice 1')}
+                      {raceSessionTab === 'fp2' && (language === 'ja' ? 'フリー practice 2' : 'Free Practice 2')}
+                      {raceSessionTab === 'fp3' && (language === 'ja' ? 'フリー practice 3' : 'Free Practice 3')}
+                      {raceSessionTab === 'qualifying' && (language === 'ja' ? '予選結果' : 'Qualifying Results')}
+                      {raceSessionTab === 'sprint-qualifying' && (language === 'ja' ? 'スプリント予選結果' : 'Sprint Qualifying Results')}
+                      {raceSessionTab === 'sprint' && (language === 'ja' ? 'スプリントレース結果' : 'Sprint Race Results')}
+                      {raceSessionTab === 'race' && (language === 'ja' ? 'レース結果' : 'Race Results')}
+                    </h3>
+                    
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 px-3">{language === 'ja' ? '順位' : 'Pos'}</th>
+                            <th className="text-left py-2 px-3">{language === 'ja' ? 'ドライバー' : 'Driver'}</th>
+                            <th className="text-left py-2 px-3">{language === 'ja' ? 'チーム' : 'Team'}</th>
+                            {(raceSessionTab === 'qualifying' || raceSessionTab === 'sprint-qualifying') && (
+                              <>
+                                <th className="text-left py-2 px-3">Q1</th>
+                                <th className="text-left py-2 px-3">Q2</th>
+                                <th className="text-left py-2 px-3">Q3</th>
+                              </>
+                            )}
+                            {(raceSessionTab === 'fp1' || raceSessionTab === 'fp2' || raceSessionTab === 'fp3') && (
+                              <th className="text-left py-2 px-3">{language === 'ja' ? 'タイム' : 'Time'}</th>
+                            )}
+                            {(raceSessionTab === 'sprint' || raceSessionTab === 'race') && (
+                              <>
+                                <th className="text-left py-2 px-3">{language === 'ja' ? 'タイム' : 'Time'}</th>
+                                <th className="text-left py-2 px-3">{language === 'ja' ? 'ポイント' : 'Points'}</th>
+                              </>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(() => {
+                            const race = sessionData.data.MRData.RaceTable.Races[0];
+                            const results = race.Results || race.QualifyingResults || [];
+                            
+                            return results.slice(0, 20).map((result: any, index: number) => (
+                              <tr key={result.Driver?.driverId || index} className="border-b border-gray-100 hover:bg-gray-50">
+                                <td className="py-2 px-3 font-medium">{result.position || index + 1}</td>
+                                <td className="py-2 px-3">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="font-medium">
+                                      {result.Driver?.givenName} {result.Driver?.familyName}
+                                    </span>
+                                    <span className="text-gray-500 text-xs">({result.Driver?.code})</span>
+                                  </div>
+                                </td>
+                                <td className="py-2 px-3 text-gray-600">{result.Constructor?.name}</td>
+                                
+                                {(raceSessionTab === 'qualifying' || raceSessionTab === 'sprint-qualifying') && (
+                                  <>
+                                    <td className="py-2 px-3">{result.Q1 || '-'}</td>
+                                    <td className="py-2 px-3">{result.Q2 || '-'}</td>
+                                    <td className="py-2 px-3">{result.Q3 || '-'}</td>
+                                  </>
+                                )}
+                                
+                                {(raceSessionTab === 'fp1' || raceSessionTab === 'fp2' || raceSessionTab === 'fp3') && (
+                                  <td className="py-2 px-3">{result.Time?.time || '-'}</td>
+                                )}
+                                
+                                {(raceSessionTab === 'sprint' || raceSessionTab === 'race') && (
+                                  <>
+                                    <td className="py-2 px-3 text-gray-600">
+                                      {result.Time?.time || result.status || '-'}
+                                    </td>
+                                    <td className="py-2 px-3 font-bold text-red-600">{result.points || '0'}</td>
+                                  </>
+                                )}
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* データがない場合 */}
+                {!sessionData?.data?.MRData?.RaceTable?.Races?.[0] && (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <p className="text-gray-500">
+                      {language === 'ja' 
+                        ? 'このセッションのデータはまだ利用できません' 
+                        : 'Session data not yet available'}
+                    </p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      {language === 'ja' 
+                        ? 'セッションが開始されるとデータが表示されます' 
+                        : 'Data will be displayed once session begins'}
+                    </p>
+                  </div>
+                )}
+
+                {/* レース基本情報 */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                  <h3 className="font-black text-lg mb-4">
+                    {language === 'ja' ? 'レース情報' : 'Race Information'}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">{language === 'ja' ? '場所' : 'Location'}</p>
+                      <p className="font-medium">{selectedRace.location}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">{language === 'ja' ? '日付' : 'Date'}</p>
+                      <p className="font-medium">{formatDate(selectedRace.date)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">{language === 'ja' ? 'ラウンド' : 'Round'}</p>
+                      <p className="font-medium">Round {selectedRace.round}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">{language === 'ja' ? 'ステータス' : 'Status'}</p>
+                      <p className="font-medium">
+                        {selectedRace.results ? 
+                          (language === 'ja' ? '完了' : 'Completed') : 
+                          (language === 'ja' ? '未開催' : 'Not Held')
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

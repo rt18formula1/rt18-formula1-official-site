@@ -280,6 +280,46 @@ async function getPitStops(year: number, round: number): Promise<any> {
   }
 }
 
+// 各セッションの結果を取得
+async function getSessionResults(year: number, round: number, session: string): Promise<any> {
+  try {
+    let endpoint = '';
+    
+    switch (session) {
+      case 'fp1':
+        endpoint = `/${year}/${round}/fp1.json?limit=100`;
+        break;
+      case 'fp2':
+        endpoint = `/${year}/${round}/fp2.json?limit=100`;
+        break;
+      case 'fp3':
+        endpoint = `/${year}/${round}/fp3.json?limit=100`;
+        break;
+      case 'sprint-qualifying':
+        endpoint = `/${year}/${round}/sprint/qualifying.json?limit=100`;
+        break;
+      case 'sprint':
+        endpoint = `/${year}/${round}/sprint.json?limit=100`;
+        break;
+      case 'qualifying':
+        endpoint = `/${year}/${round}/qualifying.json?limit=100`;
+        break;
+      case 'race':
+        endpoint = `/${year}/${round}/results.json?limit=100`;
+        break;
+      default:
+        throw new Error(`Unknown session type: ${session}`);
+    }
+    
+    console.log(`Fetching ${session} results for year: ${year}, round: ${round}`);
+    const response = await fetchFromJolpica(endpoint);
+    return response;
+  } catch (error) {
+    console.error(`Error fetching ${session} results:`, error);
+    throw error;
+  }
+}
+
 // フォールバック用のドライバースタンディングスデータ
 function getFallbackDriverStandings(year: number): any {
   if (year === 2025) {
@@ -639,8 +679,9 @@ async function getRaceSchedule(year: number): Promise<F1OfficialData> {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const year = searchParams.get('year');
-  const type = searchParams.get('type'); // 'schedule', 'drivers', 'constructors', 'qualifying', 'circuits', 'drivers-info', 'constructors-info', 'laps', 'pitstops'
+  const type = searchParams.get('type'); // 'schedule', 'drivers', 'constructors', 'qualifying', 'circuits', 'drivers-info', 'constructors-info', 'laps', 'pitstops', 'session'
   const round = searchParams.get('round');
+  const session = searchParams.get('session'); // 'fp1', 'fp2', 'fp3', 'sprint-qualifying', 'sprint', 'qualifying', 'race'
 
   try {
     const targetYear = year ? parseInt(year) : new Date().getFullYear();
@@ -738,6 +779,24 @@ export async function GET(request: Request) {
           round: targetRound,
           type: 'pitstops',
           data: pitStops,
+          _scraped: true,
+          _fallback: false
+        });
+
+      case 'session':
+        if (!targetRound || !session) {
+          return NextResponse.json(
+            { error: 'Round and session parameters are required for session data' },
+            { status: 400 }
+          );
+        }
+        const sessionResults = await getSessionResults(targetYear, targetRound, session);
+        return NextResponse.json({
+          season: targetYear,
+          round: targetRound,
+          session: session,
+          type: 'session',
+          data: sessionResults,
           _scraped: true,
           _fallback: false
         });
