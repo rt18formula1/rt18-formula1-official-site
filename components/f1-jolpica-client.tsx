@@ -420,7 +420,7 @@ export default function F1JolpicaClient() {
             ) : (
               <div className="space-y-8">
                 {/* ドライバースタンディングス */}
-                {driverStandings?.data?.MRData?.StandingsTable?.Standings && (
+                {driverStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings && (
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                     <h3 className="font-black text-lg mb-4">
                       {language === 'ja' ? 'ドライバーランキング' : 'Driver Championship'}
@@ -438,7 +438,7 @@ export default function F1JolpicaClient() {
                           </tr>
                         </thead>
                         <tbody>
-                          {driverStandings.data.MRData.StandingsTable.Standings.map((standing: any, index: number) => (
+                          {driverStandings.data.MRData.StandingsTable.StandingsLists[0].DriverStandings.map((standing: any, index: number) => (
                             <tr key={standing.Driver.driverId} className="border-b border-gray-100 hover:bg-gray-50">
                               <td className="py-2 px-3 font-medium">{standing.position}</td>
                               <td className="py-2 px-3">
@@ -462,7 +462,7 @@ export default function F1JolpicaClient() {
                 )}
 
                 {/* コンストラクタースタンディングス */}
-                {constructorStandings?.data?.MRData?.StandingsTable?.Standings && (
+                {constructorStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings && (
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                     <h3 className="font-black text-lg mb-4">
                       {language === 'ja' ? 'チームランキング' : 'Constructor Championship'}
@@ -479,7 +479,7 @@ export default function F1JolpicaClient() {
                           </tr>
                         </thead>
                         <tbody>
-                          {constructorStandings.data.MRData.StandingsTable.Standings.map((standing: any) => (
+                          {constructorStandings.data.MRData.StandingsTable.StandingsLists[0].ConstructorStandings.map((standing: any) => (
                             <tr key={standing.Constructor.constructorId} className="border-b border-gray-100 hover:bg-gray-50">
                               <td className="py-2 px-3 font-medium">{standing.position}</td>
                               <td className="py-2 px-3 font-medium">{standing.Constructor.name}</td>
@@ -495,10 +495,10 @@ export default function F1JolpicaClient() {
                 )}
 
                 {/* データがない場合 */}
-                {(!driverStandings?.data?.MRData?.StandingsTable?.Standings || 
-                  driverStandings?.data?.MRData?.StandingsTable?.Standings.length === 0) && 
-                 (!constructorStandings?.data?.MRData?.StandingsTable?.Standings || 
-                  constructorStandings?.data?.MRData?.StandingsTable?.Standings.length === 0) && (
+                {(!driverStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || 
+                  driverStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings.length === 0) && 
+                 (!constructorStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings || 
+                  constructorStandings?.data?.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings.length === 0) && (
                   <div className="text-center py-8 bg-gray-50 rounded-lg">
                     <p className="text-gray-500">
                       {language === 'ja' 
