@@ -105,10 +105,23 @@ export class OpenF1ApiClient {
       const response = await axios.get<OpenF1Driver[]>(`${this.baseUrl}/drivers`, {
         params,
         timeout: 10000,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
       });
       return response.data;
     } catch (error) {
       console.error('Error fetching drivers:', error);
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          throw new Error('Request timeout - please try again');
+        } else if (error.response) {
+          throw new Error(`API Error: ${error.response.status} - ${error.response.statusText}`);
+        } else if (error.request) {
+          throw new Error('Network error - please check your connection');
+        }
+      }
       throw new Error('Failed to fetch drivers data');
     }
   }
@@ -144,13 +157,28 @@ export class OpenF1ApiClient {
     year?: number;
   }): Promise<OpenF1Meeting[]> {
     try {
+      console.log('Fetching meetings with params:', params);
       const response = await axios.get<OpenF1Meeting[]>(`${this.baseUrl}/meetings`, {
         params,
         timeout: 10000,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
       });
+      console.log('Meetings response received:', response.data.length);
       return response.data;
     } catch (error) {
       console.error('Error fetching meetings:', error);
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          throw new Error('Request timeout - please try again');
+        } else if (error.response) {
+          throw new Error(`API Error: ${error.response.status} - ${error.response.statusText}`);
+        } else if (error.request) {
+          throw new Error('Network error - please check your connection');
+        }
+      }
       throw new Error('Failed to fetch meetings data');
     }
   }
@@ -251,9 +279,21 @@ export class OpenF1ApiClient {
   // 年間のレースカレンダーを取得
   async getSeasonCalendar(year: number = new Date().getFullYear()): Promise<OpenF1Meeting[]> {
     try {
-      return await this.getMeetings({ year });
+      console.log('Fetching season calendar for year:', year);
+      const meetings = await this.getMeetings({ year });
+      console.log('Meetings received:', meetings.length);
+      return meetings;
     } catch (error) {
       console.error('Error fetching season calendar:', error);
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          throw new Error('Request timeout - please try again');
+        } else if (error.response) {
+          throw new Error(`API Error: ${error.response.status} - ${error.response.statusText}`);
+        } else if (error.request) {
+          throw new Error('Network error - please check your connection');
+        }
+      }
       throw new Error('Failed to fetch season calendar');
     }
   }

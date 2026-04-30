@@ -23,10 +23,15 @@ export default function F1DatabaseClient() {
     const fetchSeasonCalendar = async () => {
       try {
         setLoading(true);
+        setError(null);
+        console.log('Fetching season calendar for year:', selectedYear);
         const calendar = await openF1Api.getSeasonCalendar(selectedYear);
+        console.log('Calendar data received:', calendar);
         setSeasonCalendar(calendar);
       } catch (err) {
-        setError(language === 'ja' ? 'データの取得に失敗しました' : 'Failed to fetch data');
+        console.error('Error fetching season calendar:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        setError(`${language === 'ja' ? 'データの取得に失敗しました: ' : 'Failed to fetch data: '}${errorMessage}`);
       } finally {
         setLoading(false);
       }
