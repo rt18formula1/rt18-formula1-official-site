@@ -94,7 +94,7 @@ export default function F1FastClient() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
             <p className="text-gray-600">
-              {language === 'ja' ? 'FastF1データを読み込み中...' : 'Loading FastF1 data...'}
+              {language === 'ja' ? 'F1データを読み込み中...' : 'Loading F1 data...'}
             </p>
           </div>
         </main>
@@ -137,7 +137,7 @@ export default function F1FastClient() {
           {/* ヘッダー */}
           <div className="mb-8">
             <h1 className="text-3xl md:text-5xl font-black mb-4">
-              {language === 'ja' ? 'F1データベース (FastF1)' : 'F1 Database (FastF1)'}
+              {language === 'ja' ? 'F1 DB' : 'F1 DB'}
             </h1>
             <p className="text-gray-600 text-base md:text-lg">
               {language === 'ja' 

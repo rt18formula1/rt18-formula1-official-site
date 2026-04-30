@@ -13,7 +13,7 @@ export function SiteHeader() {
     { href: "/news", label: t("navNews") },
     { href: "/portfolio", label: t("navPortfolio") },
     { href: "/calendar", label: t("navCalendar") },
-    { href: "/f1-database", label: language === 'ja' ? 'F1データベース' : 'F1 Database' },
+    { href: "/f1-database", label: language === 'ja' ? 'F1 DB' : 'F1 DB' },
     { href: "/#profile", label: t("navProfile") },
     { href: "/#request", label: t("navRequest") },
     { href: "/#contact", label: t("navContact") },
