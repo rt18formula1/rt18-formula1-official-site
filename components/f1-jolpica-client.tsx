@@ -126,7 +126,7 @@ export default function F1JolpicaClient() {
 
   // タブがstandingsに切り替わったときにスタンディングスを取得
   useEffect(() => {
-    if (activeTab === 'standings' && (!driverStandings || !constructorStandings)) {
+    if (activeTab === 'standings') {
       fetchStandings();
     }
   }, [activeTab, selectedYear]);
@@ -495,13 +495,20 @@ export default function F1JolpicaClient() {
                 )}
 
                 {/* データがない場合 */}
-                {!driverStandings?.data?.MRData?.StandingsTable?.Standings && 
-                 !constructorStandings?.data?.MRData?.StandingsTable?.Standings && (
+                {(!driverStandings?.data?.MRData?.StandingsTable?.Standings || 
+                  driverStandings?.data?.MRData?.StandingsTable?.Standings.length === 0) && 
+                 (!constructorStandings?.data?.MRData?.StandingsTable?.Standings || 
+                  constructorStandings?.data?.MRData?.StandingsTable?.Standings.length === 0) && (
                   <div className="text-center py-8 bg-gray-50 rounded-lg">
                     <p className="text-gray-500">
                       {language === 'ja' 
                         ? 'このシーズンのリザルトデータはまだ利用できません' 
                         : 'Season results data not yet available for this season'}
+                    </p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      {language === 'ja' 
+                        ? 'レースが開始されるとデータが表示されます' 
+                        : 'Data will be displayed once races begin'}
                     </p>
                   </div>
                 )}
