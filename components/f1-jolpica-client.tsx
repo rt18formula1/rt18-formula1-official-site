@@ -14,7 +14,7 @@ export default function F1JolpicaClient() {
   const [raceSchedule, setRaceSchedule] = useState<F1OfficialRace[]>([]);
   const [selectedRace, setSelectedRace] = useState<F1OfficialRace | null>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [activeTab, setActiveTab] = useState<'schedule' | 'race' | 'results'>('schedule');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'details'>('schedule');
   const [apiStatus, setApiStatus] = useState<{ isAvailable: boolean; responseTime?: number; error?: string } | null>(null);
 
   // 日付フォーマット関数
@@ -87,6 +87,13 @@ export default function F1JolpicaClient() {
     setActiveTab('schedule');
   }, [selectedYear]);
 
+  // レースが選択されたときに詳細タブに切り替え
+  useEffect(() => {
+    if (selectedRace) {
+      setActiveTab('details');
+    }
+  }, [selectedRace]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -131,47 +138,6 @@ export default function F1JolpicaClient() {
     <div className="min-h-screen bg-gray-50">
       <SiteHeader />
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* ヘッダー */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-black text-gray-900 mb-2">
-            {language === 'ja' ? 'F1データベース (Jolpica API)' : 'F1 Database (Jolpica API)'}
-          </h1>
-          <p className="text-gray-600">
-            {language === 'ja' 
-              ? 'リアルタイムF1データをJolpica APIから取得' 
-              : 'Real-time F1 data from Jolpica API'}
-          </p>
-        </div>
-
-        {/* APIステータス */}
-        {apiStatus && (
-          <div className={`mb-6 p-4 rounded-lg border ${
-            apiStatus.isAvailable 
-              ? 'bg-green-50 border-green-200' 
-              : 'bg-yellow-50 border-yellow-200'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <span className={`font-medium ${
-                  apiStatus.isAvailable ? 'text-green-800' : 'text-yellow-800'
-                }`}>
-                  Jolpica API: {apiStatus.isAvailable 
-                    ? (language === 'ja' ? '利用可能' : 'Available') 
-                    : (language === 'ja' ? '利用不可' : 'Unavailable')}
-                </span>
-                {apiStatus.responseTime && (
-                  <span className="text-sm text-gray-600 ml-2">
-                    ({apiStatus.responseTime}ms)
-                  </span>
-                )}
-              </div>
-              {!apiStatus.isAvailable && apiStatus.error && (
-                <span className="text-sm text-yellow-600">{apiStatus.error}</span>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* 年選択 */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -194,7 +160,10 @@ export default function F1JolpicaClient() {
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
             <button
-              onClick={() => setActiveTab('schedule')}
+              onClick={() => {
+                setActiveTab('schedule');
+                setSelectedRace(null);
+              }}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'schedule'
                   ? 'border-red-500 text-red-600'
@@ -203,28 +172,18 @@ export default function F1JolpicaClient() {
             >
               {language === 'ja' ? 'スケジュール' : 'Schedule'}
             </button>
-            <button
-              onClick={() => setActiveTab('race')}
-              disabled={!selectedRace}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'race'
-                  ? 'border-red-500 text-red-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } ${!selectedRace ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {language === 'ja' ? 'レース詳細' : 'Race Details'}
-            </button>
-            <button
-              onClick={() => setActiveTab('results')}
-              disabled={!selectedRace || !selectedRace.results}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'results'
-                  ? 'border-red-500 text-red-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } ${!selectedRace || !selectedRace.results ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {language === 'ja' ? '結果' : 'Results'}
-            </button>
+            {selectedRace && (
+              <button
+                onClick={() => setActiveTab('details')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'details'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {language === 'ja' ? 'レース詳細' : 'Race Details'}
+              </button>
+            )}
           </nav>
         </div>
 
@@ -279,11 +238,13 @@ export default function F1JolpicaClient() {
         )}
 
         {/* レース詳細タブ */}
-        {activeTab === 'race' && selectedRace && (
+        {activeTab === 'details' && selectedRace && (
           <div className="space-y-6">
             <h2 className="text-2xl font-black">
-              {language === 'ja' ? 'レース詳細' : 'Race Details'}
+              {selectedRace.name} - {language === 'ja' ? 'レース詳細' : 'Race Details'}
             </h2>
+            
+            {/* レース基本情報 */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -317,23 +278,19 @@ export default function F1JolpicaClient() {
                 </a>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* 結果タブ */}
-        {activeTab === 'results' && selectedRace && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-black">
+            {/* レース結果 */}
+            <h3 className="text-xl font-black mb-4">
               {language === 'ja' ? 'レース結果' : 'Race Results'}
-            </h2>
+            </h3>
             
             {selectedRace.results && selectedRace.results.length > 0 ? (
               <div className="space-y-4">
                 {/* 表彰台 */}
                 <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 rounded-lg">
-                  <h3 className="font-black text-lg mb-4">
+                  <h4 className="font-black text-lg mb-4">
                     {language === 'ja' ? '表彰台' : 'Podium'}
-                  </h3>
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {selectedRace.results.slice(0, 3).map((result, index) => (
                       <div key={result.position} className="text-center">
@@ -352,9 +309,9 @@ export default function F1JolpicaClient() {
 
                 {/* 完全な結果リスト */}
                 <div className="bg-gray-50 p-6 rounded-lg">
-                  <h3 className="font-black text-lg mb-4">
+                  <h4 className="font-black text-lg mb-4">
                     {language === 'ja' ? '完全な結果' : 'Full Results'}
-                  </h3>
+                  </h4>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
@@ -387,7 +344,7 @@ export default function F1JolpicaClient() {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8">
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
                 <p className="text-gray-500">
                   {language === 'ja' ? 'このレースはまだ開催されていません' : 'This race has not been held yet'}
                 </p>
