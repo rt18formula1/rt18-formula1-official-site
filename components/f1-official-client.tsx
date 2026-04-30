@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useLanguage } from "@/components/providers/language-provider";
-import { f1OfficialApi, type F1OfficialRace } from "@/lib/f1-official-api";
+import { f1OfficialApi, type F1OfficialRace, type RaceResult } from "@/lib/f1-official-api";
 
 export default function F1OfficialClient() {
   const { language, t } = useLanguage();
@@ -71,7 +71,7 @@ export default function F1OfficialClient() {
   };
 
   const getRaceStatus = (race: F1OfficialRace) => {
-    if (race.winner) {
+    if (race.results && race.results.length > 0) {
       return {
         status: language === 'ja' ? '完了' : 'Completed',
         color: 'text-green-600',
@@ -213,10 +213,10 @@ export default function F1OfficialClient() {
                           <p className="text-gray-600 text-sm mb-1">
                             {race.location} • {race.country}
                           </p>
-                          {race.winner && (
+                          {race.results && race.results.length > 0 && (
                             <p className="text-sm text-gray-500">
                               {language === 'ja' ? '優勝: ' : 'Winner: '}
-                              {race.winner.name} ({race.winner.code})
+                              {race.results[0].name} ({race.results[0].code})
                             </p>
                           )}
                         </div>
@@ -292,7 +292,7 @@ export default function F1OfficialClient() {
                 {language === 'ja' ? 'レース結果' : 'Race Results'}
               </h2>
               
-              {selectedRace.winner ? (
+              {selectedRace.results && selectedRace.results.length > 0 ? (
                 <div className="space-y-4">
                   {/* 表彰台 */}
                   <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 rounded-lg">
@@ -303,30 +303,72 @@ export default function F1OfficialClient() {
                       {/* 1位 */}
                       <div className="text-center">
                         <div className="text-4xl mb-2">🥇</div>
-                        <div className="font-black text-lg">{selectedRace.winner.name}</div>
-                        <div className="text-sm text-gray-600">{selectedRace.winner.code}</div>
-                        <div className="text-sm font-medium">{selectedRace.winner.time}</div>
+                        <div className="font-black text-lg">{selectedRace.results[0].name}</div>
+                        <div className="text-sm text-gray-600">{selectedRace.results[0].code}</div>
+                        <div className="text-sm font-medium">{selectedRace.results[0].time}</div>
+                        <div className="text-xs text-gray-500">{selectedRace.results[0].team}</div>
+                        <div className="text-xs font-medium text-gray-700">{selectedRace.results[0].points} pts</div>
                       </div>
                       
                       {/* 2位 */}
-                      {selectedRace.second && (
+                      {selectedRace.results[1] && (
                         <div className="text-center">
                           <div className="text-4xl mb-2">🥈</div>
-                          <div className="font-black text-lg">{selectedRace.second.name}</div>
-                          <div className="text-sm text-gray-600">{selectedRace.second.code}</div>
-                          <div className="text-sm font-medium">{selectedRace.second.time}</div>
+                          <div className="font-black text-lg">{selectedRace.results[1].name}</div>
+                          <div className="text-sm text-gray-600">{selectedRace.results[1].code}</div>
+                          <div className="text-sm font-medium">{selectedRace.results[1].time}</div>
+                          <div className="text-xs text-gray-500">{selectedRace.results[1].team}</div>
+                          <div className="text-xs font-medium text-gray-700">{selectedRace.results[1].points} pts</div>
                         </div>
                       )}
                       
                       {/* 3位 */}
-                      {selectedRace.third && (
+                      {selectedRace.results[2] && (
                         <div className="text-center">
                           <div className="text-4xl mb-2">🥉</div>
-                          <div className="font-black text-lg">{selectedRace.third.name}</div>
-                          <div className="text-sm text-gray-600">{selectedRace.third.code}</div>
-                          <div className="text-sm font-medium">{selectedRace.third.time}</div>
+                          <div className="font-black text-lg">{selectedRace.results[2].name}</div>
+                          <div className="text-sm text-gray-600">{selectedRace.results[2].code}</div>
+                          <div className="text-sm font-medium">{selectedRace.results[2].time}</div>
+                          <div className="text-xs text-gray-500">{selectedRace.results[2].team}</div>
+                          <div className="text-xs font-medium text-gray-700">{selectedRace.results[2].points} pts</div>
                         </div>
                       )}
+                    </div>
+                  </div>
+
+                  {/* 完全な結果リスト */}
+                  <div className="bg-gray-50 p-6 rounded-lg">
+                    <h3 className="font-black text-lg mb-4">
+                      {language === 'ja' ? '完全な結果' : 'Full Results'}
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 px-3">Pos</th>
+                            <th className="text-left py-2 px-3">Driver</th>
+                            <th className="text-left py-2 px-3">Team</th>
+                            <th className="text-left py-2 px-3">Time</th>
+                            <th className="text-left py-2 px-3">Points</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedRace.results.map((result) => (
+                            <tr key={result.position} className="border-b border-gray-100 hover:bg-gray-100">
+                              <td className="py-2 px-3 font-medium">{result.position}</td>
+                              <td className="py-2 px-3">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-medium">{result.name}</span>
+                                  <span className="text-gray-500 text-xs">({result.code})</span>
+                                </div>
+                              </td>
+                              <td className="py-2 px-3 text-gray-600">{result.team}</td>
+                              <td className="py-2 px-3 text-gray-600">{result.time}</td>
+                              <td className="py-2 px-3 font-medium">{result.points}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,14 @@
 // F1公式サイトAPIクライアント
 
+export interface RaceResult {
+  position: number;
+  name: string;
+  code: string;
+  time: string;
+  points: number;
+  team: string;
+}
+
 export interface F1OfficialRace {
   round: number;
   name: string;
@@ -7,21 +16,7 @@ export interface F1OfficialRace {
   country: string;
   date: string;
   url: string;
-  winner?: {
-    name: string;
-    code: string;
-    time: string;
-  };
-  second?: {
-    name: string;
-    code: string;
-    time: string;
-  };
-  third?: {
-    name: string;
-    code: string;
-    time: string;
-  };
+  results?: RaceResult[];
 }
 
 export interface F1OfficialData {
@@ -95,8 +90,8 @@ export class F1OfficialApiClient {
       // 最新のレースを取得
       const latestRace = schedule[schedule.length - 1];
       
-      // レースが完了したかどうかをチェック（winner情報があるか）
-      const isCompleted = !!latestRace.winner;
+      // レースが完了したかどうかをチェック（results情報があるか）
+      const isCompleted = !!(latestRace.results && latestRace.results.length > 0);
 
       return {
         race: latestRace,
@@ -113,22 +108,20 @@ export class F1OfficialApiClient {
     try {
       const currentYear = new Date().getFullYear();
       const years = [];
-      // 2018年から現在までの年を生成
-      for (let year = currentYear; year >= 2018; year--) {
+      // 2026年から2018年までの年を生成（未来の年も含む）
+      for (let year = 2026; year >= 2018; year--) {
         years.push(year);
       }
       return years;
     } catch (error) {
       console.error('Error getting available years:', error);
-      return [new Date().getFullYear()];
+      return [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018];
     }
   }
 
   // レース結果の詳細情報を取得
   async getRaceResults(year: number, round: number): Promise<{
-    winner?: F1OfficialRace['winner'];
-    second?: F1OfficialRace['second'];
-    third?: F1OfficialRace['third'];
+    results?: RaceResult[];
   }> {
     try {
       const race = await this.getRace(year, round);
@@ -137,9 +130,7 @@ export class F1OfficialApiClient {
       }
 
       return {
-        winner: race.winner,
-        second: race.second,
-        third: race.third
+        results: race.results
       };
     } catch (error) {
       console.error('Error fetching race results:', error);
@@ -155,7 +146,7 @@ export class F1OfficialApiClient {
   }> {
     try {
       const schedule = await this.getRaceSchedule(year);
-      const completedRaces = schedule.filter(race => race.winner).length;
+      const completedRaces = schedule.filter(race => race.results && race.results.length > 0).length;
       const totalRaces = schedule.length;
       const upcomingRaces = totalRaces - completedRaces;
 
