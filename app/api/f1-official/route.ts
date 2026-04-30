@@ -191,6 +191,7 @@ const generateF1OfficialData = (year: number): F1OfficialData => {
   // 2025年シーズンのデータ
   if (targetYear === 2025) {
     const races: F1OfficialRace[] = [
+      // 完了済みレース（結果データあり）
       {
         round: 1,
         name: "Australian Grand Prix",
@@ -250,6 +251,183 @@ const generateF1OfficialData = (year: number): F1OfficialData => {
           { position: 19, name: "Alexander Albon", code: "ALB", time: "+40.123", points: 0, team: "Williams" },
           { position: 20, name: "Franco Colapinto", code: "COL", time: "+42.345", points: 0, team: "Williams" }
         ]
+      },
+      // 未完了レース（基本データのみ）
+      {
+        round: 3,
+        name: "Japanese Grand Prix",
+        location: "Suzuka",
+        country: "Japan",
+        date: "2025-04-06",
+        url: "https://www.formula1.com/en/racing/2025/japan.html"
+      },
+      {
+        round: 4,
+        name: "Bahrain Grand Prix",
+        location: "Sakhir",
+        country: "Bahrain",
+        date: "2025-04-13",
+        url: "https://www.formula1.com/en/racing/2025/bahrain.html"
+      },
+      {
+        round: 5,
+        name: "Saudi Arabian Grand Prix",
+        location: "Jeddah",
+        country: "Saudi Arabia",
+        date: "2025-04-20",
+        url: "https://www.formula1.com/en/racing/2025/saudi-arabia.html"
+      },
+      {
+        round: 6,
+        name: "Miami Grand Prix",
+        location: "Miami",
+        country: "United States",
+        date: "2025-05-04",
+        url: "https://www.formula1.com/en/racing/2025/miami.html"
+      },
+      {
+        round: 7,
+        name: "Emilia Romagna Grand Prix",
+        location: "Imola",
+        country: "Italy",
+        date: "2025-05-18",
+        url: "https://www.formula1.com/en/racing/2025/emiliaromagna.html"
+      },
+      {
+        round: 8,
+        name: "Monaco Grand Prix",
+        location: "Monte Carlo",
+        country: "Monaco",
+        date: "2025-05-25",
+        url: "https://www.formula1.com/en/racing/2025/monaco.html"
+      },
+      {
+        round: 9,
+        name: "Canadian Grand Prix",
+        location: "Montreal",
+        country: "Canada",
+        date: "2025-06-08",
+        url: "https://www.formula1.com/en/racing/2025/canada.html"
+      },
+      {
+        round: 10,
+        name: "Spanish Grand Prix",
+        location: "Barcelona",
+        country: "Spain",
+        date: "2025-06-22",
+        url: "https://www.formula1.com/en/racing/2025/spain.html"
+      },
+      {
+        round: 11,
+        name: "Austrian Grand Prix",
+        location: "Spielberg",
+        country: "Austria",
+        date: "2025-06-29",
+        url: "https://www.formula1.com/en/racing/2025/austria.html"
+      },
+      {
+        round: 12,
+        name: "British Grand Prix",
+        location: "Silverstone",
+        country: "United Kingdom",
+        date: "2025-07-06",
+        url: "https://www.formula1.com/en/racing/2025/great-britain.html"
+      },
+      {
+        round: 13,
+        name: "Hungarian Grand Prix",
+        location: "Budapest",
+        country: "Hungary",
+        date: "2025-07-20",
+        url: "https://www.formula1.com/en/racing/2025/hungary.html"
+      },
+      {
+        round: 14,
+        name: "Belgian Grand Prix",
+        location: "Spa",
+        country: "Belgium",
+        date: "2025-07-27",
+        url: "https://www.formula1.com/en/racing/2025/belgium.html"
+      },
+      {
+        round: 15,
+        name: "Dutch Grand Prix",
+        location: "Zandvoort",
+        country: "Netherlands",
+        date: "2025-08-24",
+        url: "https://www.formula1.com/en/racing/2025/netherlands.html"
+      },
+      {
+        round: 16,
+        name: "Italian Grand Prix",
+        location: "Monza",
+        country: "Italy",
+        date: "2025-08-31",
+        url: "https://www.formula1.com/en/racing/2025/monza.html"
+      },
+      {
+        round: 17,
+        name: "Azerbaijan Grand Prix",
+        location: "Baku",
+        country: "Azerbaijan",
+        date: "2025-09-14",
+        url: "https://www.formula1.com/en/racing/2025/azerbaijan.html"
+      },
+      {
+        round: 18,
+        name: "Singapore Grand Prix",
+        location: "Singapore",
+        country: "Singapore",
+        date: "2025-09-21",
+        url: "https://www.formula1.com/en/racing/2025/singapore.html"
+      },
+      {
+        round: 19,
+        name: "United States Grand Prix",
+        location: "Austin",
+        country: "United States",
+        date: "2025-10-19",
+        url: "https://www.formula1.com/en/racing/2025/united-states.html"
+      },
+      {
+        round: 20,
+        name: "Mexico City Grand Prix",
+        location: "Mexico City",
+        country: "Mexico",
+        date: "2025-10-26",
+        url: "https://www.formula1.com/en/racing/2025/mexico-city.html"
+      },
+      {
+        round: 21,
+        name: "São Paulo Grand Prix",
+        location: "São Paulo",
+        country: "Brazil",
+        date: "2025-11-02",
+        url: "https://www.formula1.com/en/racing/2025/sao-paulo.html"
+      },
+      {
+        round: 22,
+        name: "Las Vegas Grand Prix",
+        location: "Las Vegas",
+        country: "United States",
+        date: "2025-11-22",
+        url: "https://www.formula1.com/en/racing/2025/las-vegas.html"
+      },
+      {
+        round: 23,
+        name: "Qatar Grand Prix",
+        location: "Lusail",
+        country: "Qatar",
+        date: "2025-11-30",
+        url: "https://www.formula1.com/en/racing/2025/qatar.html"
+      },
+      {
+        round: 24,
+        name: "Abu Dhabi Grand Prix",
+        location: "Abu Dhabi",
+        country: "United Arab Emirates",
+        date: "2025-12-07",
+        url: "https://www.formula1.com/en/racing/2025/abu-dhabi.html"
       }
     ];
 
@@ -259,6 +437,7 @@ const generateF1OfficialData = (year: number): F1OfficialData => {
   // 2026年シーズンのデータ
   if (targetYear === 2026) {
     const races: F1OfficialRace[] = [
+      // 完了済みレース（結果データあり）
       {
         round: 1,
         name: "Bahrain Grand Prix",
@@ -318,6 +497,183 @@ const generateF1OfficialData = (year: number): F1OfficialData => {
           { position: 19, name: "Alexander Albon", code: "ALB", time: "+58.567", points: 0, team: "Williams" },
           { position: 20, name: "Franco Colapinto", code: "COL", time: "+1:01.890", points: 0, team: "Williams" }
         ]
+      },
+      // 未完了レース（基本データのみ）
+      {
+        round: 3,
+        name: "Australian Grand Prix",
+        location: "Melbourne",
+        country: "Australia",
+        date: "2026-03-22",
+        url: "https://www.formula1.com/en/racing/2026/australia.html"
+      },
+      {
+        round: 4,
+        name: "Japanese Grand Prix",
+        location: "Suzuka",
+        country: "Japan",
+        date: "2026-04-05",
+        url: "https://www.formula1.com/en/racing/2026/japan.html"
+      },
+      {
+        round: 5,
+        name: "Chinese Grand Prix",
+        location: "Shanghai",
+        country: "China",
+        date: "2026-04-19",
+        url: "https://www.formula1.com/en/racing/2026/china.html"
+      },
+      {
+        round: 6,
+        name: "Miami Grand Prix",
+        location: "Miami",
+        country: "United States",
+        date: "2026-05-03",
+        url: "https://www.formula1.com/en/racing/2026/miami.html"
+      },
+      {
+        round: 7,
+        name: "Emilia Romagna Grand Prix",
+        location: "Imola",
+        country: "Italy",
+        date: "2026-05-17",
+        url: "https://www.formula1.com/en/racing/2026/emiliaromagna.html"
+      },
+      {
+        round: 8,
+        name: "Monaco Grand Prix",
+        location: "Monte Carlo",
+        country: "Monaco",
+        date: "2026-05-24",
+        url: "https://www.formula1.com/en/racing/2026/monaco.html"
+      },
+      {
+        round: 9,
+        name: "Canadian Grand Prix",
+        location: "Montreal",
+        country: "Canada",
+        date: "2026-06-07",
+        url: "https://www.formula1.com/en/racing/2026/canada.html"
+      },
+      {
+        round: 10,
+        name: "Spanish Grand Prix",
+        location: "Barcelona",
+        country: "Spain",
+        date: "2026-06-21",
+        url: "https://www.formula1.com/en/racing/2026/spain.html"
+      },
+      {
+        round: 11,
+        name: "Austrian Grand Prix",
+        location: "Spielberg",
+        country: "Austria",
+        date: "2026-06-28",
+        url: "https://www.formula1.com/en/racing/2026/austria.html"
+      },
+      {
+        round: 12,
+        name: "British Grand Prix",
+        location: "Silverstone",
+        country: "United Kingdom",
+        date: "2026-07-05",
+        url: "https://www.formula1.com/en/racing/2026/great-britain.html"
+      },
+      {
+        round: 13,
+        name: "Hungarian Grand Prix",
+        location: "Budapest",
+        country: "Hungary",
+        date: "2026-07-19",
+        url: "https://www.formula1.com/en/racing/2026/hungary.html"
+      },
+      {
+        round: 14,
+        name: "Belgian Grand Prix",
+        location: "Spa",
+        country: "Belgium",
+        date: "2026-07-26",
+        url: "https://www.formula1.com/en/racing/2026/belgium.html"
+      },
+      {
+        round: 15,
+        name: "Dutch Grand Prix",
+        location: "Zandvoort",
+        country: "Netherlands",
+        date: "2026-08-23",
+        url: "https://www.formula1.com/en/racing/2026/netherlands.html"
+      },
+      {
+        round: 16,
+        name: "Italian Grand Prix",
+        location: "Monza",
+        country: "Italy",
+        date: "2026-08-30",
+        url: "https://www.formula1.com/en/racing/2026/monza.html"
+      },
+      {
+        round: 17,
+        name: "Azerbaijan Grand Prix",
+        location: "Baku",
+        country: "Azerbaijan",
+        date: "2026-09-13",
+        url: "https://www.formula1.com/en/racing/2026/azerbaijan.html"
+      },
+      {
+        round: 18,
+        name: "Singapore Grand Prix",
+        location: "Singapore",
+        country: "Singapore",
+        date: "2026-09-20",
+        url: "https://www.formula1.com/en/racing/2026/singapore.html"
+      },
+      {
+        round: 19,
+        name: "United States Grand Prix",
+        location: "Austin",
+        country: "United States",
+        date: "2026-10-18",
+        url: "https://www.formula1.com/en/racing/2026/united-states.html"
+      },
+      {
+        round: 20,
+        name: "Mexico City Grand Prix",
+        location: "Mexico City",
+        country: "Mexico",
+        date: "2026-10-25",
+        url: "https://www.formula1.com/en/racing/2026/mexico-city.html"
+      },
+      {
+        round: 21,
+        name: "São Paulo Grand Prix",
+        location: "São Paulo",
+        country: "Brazil",
+        date: "2026-11-01",
+        url: "https://www.formula1.com/en/racing/2026/sao-paulo.html"
+      },
+      {
+        round: 22,
+        name: "Las Vegas Grand Prix",
+        location: "Las Vegas",
+        country: "United States",
+        date: "2026-11-21",
+        url: "https://www.formula1.com/en/racing/2026/las-vegas.html"
+      },
+      {
+        round: 23,
+        name: "Qatar Grand Prix",
+        location: "Lusail",
+        country: "Qatar",
+        date: "2026-11-29",
+        url: "https://www.formula1.com/en/racing/2026/qatar.html"
+      },
+      {
+        round: 24,
+        name: "Abu Dhabi Grand Prix",
+        location: "Abu Dhabi",
+        country: "United Arab Emirates",
+        date: "2026-12-06",
+        url: "https://www.formula1.com/en/racing/2026/abu-dhabi.html"
       }
     ];
 
