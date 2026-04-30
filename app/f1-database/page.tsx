@@ -1,9 +1,9 @@
-import F1FastClient from "@/components/f1-fast-client";
+import F1ErgastClient from "@/components/f1-ergast-client";
 
 export default function F1DatabasePage() {
   return (
     <div className="min-h-screen bg-white text-black">
-      <F1FastClient />
+      <F1ErgastClient />
     </div>
   );
 }

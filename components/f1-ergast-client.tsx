@@ -1,0 +1,338 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { useLanguage } from "@/components/providers/language-provider";
+import { ergastApi, type Race, type Driver, type Result } from "@/lib/ergast-api";
+
+export default function F1ErgastClient() {
+  const { language, t } = useLanguage();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [raceSchedule, setRaceSchedule] = useState<Race[]>([]);
+  const [selectedRace, setSelectedRace] = useState<Race | null>(null);
+  const [results, setResults] = useState<Result[]>([]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [activeTab, setActiveTab] = useState<'schedule' | 'race' | 'drivers' | 'results'>('schedule');
+
+  // 利用可能な年を取得
+  useEffect(() => {
+    const fetchAvailableYears = async () => {
+      try {
+        const currentYear = new Date().getFullYear();
+        const years = [];
+        // 1950年から現在までの年を生成
+        for (let year = currentYear; year >= 1950; year--) {
+          years.push(year);
+        }
+        setAvailableYears(years);
+      } catch (err) {
+        console.error('Error setting available years:', err);
+      }
+    };
+
+    fetchAvailableYears();
+  }, []);
+
+  // レーススケジュールを取得
+  useEffect(() => {
+    const fetchRaceSchedule = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log('Fetching race schedule for year:', selectedYear);
+        const schedule = await ergastApi.getRaceSchedule(selectedYear);
+        console.log('Race schedule received:', schedule.length);
+        setRaceSchedule(schedule);
+      } catch (err) {
+        console.error('Error fetching race schedule:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        setError(`${language === 'ja' ? 'データの取得に失敗しました: ' : 'Failed to fetch data: '}${errorMessage}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRaceSchedule();
+  }, [selectedYear, language]);
+
+  // 選択されたレースの結果を取得
+  useEffect(() => {
+    if (selectedRace) {
+      const fetchRaceResults = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          console.log('Fetching race results for:', selectedRace.raceName);
+          
+          const raceResults = await ergastApi.getRaceResults(selectedYear, parseInt(selectedRace.round));
+          console.log('Results received:', raceResults.length);
+          
+          setResults(raceResults);
+        } catch (err) {
+          console.error('Error fetching race results:', err);
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          setError(`${language === 'ja' ? 'レース結果の取得に失敗しました: ' : 'Failed to fetch race results: '}${errorMessage}`);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchRaceResults();
+    }
+  }, [selectedRace, selectedYear, language]);
+
+  const handleRaceSelect = (race: Race) => {
+    setSelectedRace(race);
+    setActiveTab('race');
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(language === 'ja' ? 'ja-JP' : 'en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (time: any) => {
+    if (!time) return '-';
+    if (time.time) return time.time;
+    if (time.millis) return `${(parseFloat(time.millis) / 1000).toFixed(3)}s`;
+    return '-';
+  };
+
+  if (loading && raceSchedule.length === 0) {
+    return (
+      <div className="min-h-screen bg-white text-black flex flex-col">
+        <SiteHeader />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+            <p className="text-gray-600">
+              {language === 'ja' ? 'F1データを読み込み中...' : 'Loading F1 data...'}
+            </p>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white text-black flex flex-col">
+        <SiteHeader />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <p className="text-red-500 mb-4">{error}</p>
+            <p className="text-sm text-gray-600 mb-4">
+              {language === 'ja' 
+                ? 'Ergast APIからデータを取得しています。ネットワーク接続を確認してください。'
+                : 'Fetching data from Ergast API. Please check your network connection.'
+              }
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+            >
+              {language === 'ja' ? '再読み込み' : 'Reload'}
+            </button>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white text-black flex flex-col">
+      <SiteHeader />
+      <main className="flex-1">
+        <div className="container mx-auto px-4 py-6 md:py-8">
+          {/* ヘッダー */}
+          <div className="mb-8">
+            <h1 className="text-3xl md:text-5xl font-black mb-4">
+              {language === 'ja' ? 'F1 DB' : 'F1 DB'}
+            </h1>
+            <p className="text-gray-600 text-base md:text-lg">
+              {language === 'ja' 
+                ? 'Formula 1の歴史的データ、ドライバー情報、レース結果（Ergast API）'
+                : 'Historical Formula 1 data, driver information, and race results (Ergast API)'
+              }
+            </p>
+          </div>
+
+          {/* 年選択 */}
+          <div className="mb-6">
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="px-4 py-2 border border-black/10 rounded-lg bg-white text-black"
+            >
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* タブナビゲーション */}
+          <div className="border-b border-black/10 mb-6">
+            <div className="flex space-x-8">
+              {[
+                { id: 'schedule', label: language === 'ja' ? 'スケジュール' : 'Schedule' },
+                { id: 'race', label: language === 'ja' ? 'レース詳細' : 'Race Details' },
+                { id: 'results', label: language === 'ja' ? '結果' : 'Results' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`pb-3 px-1 border-b-2 transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-black text-black font-black'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                  disabled={tab.id !== 'schedule' && !selectedRace}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* スケジュールタブ */}
+          {activeTab === 'schedule' && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-black mb-4">
+                {selectedYear} {language === 'ja' ? 'F1シーズンスケジュール' : 'F1 Season Schedule'}
+              </h2>
+              <div className="grid gap-4">
+                {raceSchedule.map((race) => (
+                  <div
+                    key={`${race.season}-${race.round}`}
+                    onClick={() => handleRaceSelect(race)}
+                    className="border border-black/10 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <h3 className="font-black text-lg mb-1">{race.raceName}</h3>
+                        <p className="text-gray-600 text-sm">
+                          {race.Circuit.circuitName}
+                        </p>
+                        <p className="text-gray-500 text-xs mt-1">
+                          {race.Circuit.Location.locality} • {race.Circuit.Location.country}
+                        </p>
+                      </div>
+                      <div className="mt-2 md:mt-0 text-right">
+                        <p className="text-sm text-gray-500">
+                          Round {race.round}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {formatDate(race.date)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* レース詳細タブ */}
+          {activeTab === 'race' && selectedRace && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-black mb-2">{selectedRace.raceName}</h2>
+                <p className="text-gray-600">
+                  {selectedRace.Circuit.circuitName}
+                </p>
+                <p className="text-gray-500 text-sm">
+                  {selectedRace.Circuit.Location.locality} • {selectedRace.Circuit.Location.country}
+                </p>
+                <p className="text-gray-500 text-sm">
+                  Round {selectedRace.round} • {formatDate(selectedRace.date)}
+                </p>
+              </div>
+
+              <div className="bg-gray-50 p-6 rounded-lg">
+                <h3 className="font-black text-lg mb-3">
+                  {language === 'ja' ? 'レース情報' : 'Race Information'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="font-medium">{language === 'ja' ? '開催日' : 'Date'}</p>
+                    <p className="text-gray-600">{formatDate(selectedRace.date)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium">{language === 'ja' ? 'サーキット' : 'Circuit'}</p>
+                    <p className="text-gray-600">{selectedRace.Circuit.circuitName}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium">{language === 'ja' ? '場所' : 'Location'}</p>
+                    <p className="text-gray-600">{selectedRace.Circuit.Location.locality}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium">{language === 'ja' ? '国' : 'Country'}</p>
+                    <p className="text-gray-600">{selectedRace.Circuit.Location.country}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 結果タブ */}
+          {activeTab === 'results' && selectedRace && results.length > 0 && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-black">
+                {language === 'ja' ? 'レース結果' : 'Race Results'}
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-black/10">
+                      <th className="text-left py-3 px-4 font-black text-sm">POS</th>
+                      <th className="text-left py-3 px-4 font-black text-sm">
+                        {language === 'ja' ? 'ドライバー' : 'Driver'}
+                      </th>
+                      <th className="text-left py-3 px-4 font-black text-sm">
+                        {language === 'ja' ? 'チーム' : 'Team'}
+                      </th>
+                      <th className="text-left py-3 px-4 font-black text-sm">GRID</th>
+                      <th className="text-right py-3 px-4 font-black text-sm">PTS</th>
+                      <th className="text-right py-3 px-4 font-black text-sm">TIME</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results
+                      .sort((a, b) => parseInt(a.position) - parseInt(b.position))
+                      .map((result) => (
+                        <tr key={`${result.Driver.driverId}-${result.position}`} className="border-b border-black/5">
+                          <td className="py-3 px-4 font-medium">{result.position}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium">
+                                {result.Driver.givenName} {result.Driver.familyName}
+                              </span>
+                              <span className="text-xs text-gray-500">#{result.Driver.permanentNumber}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{result.Constructor.name}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{result.grid}</td>
+                          <td className="py-3 px-4 text-right font-medium">{result.points}</td>
+                          <td className="py-3 px-4 text-right text-sm text-gray-600">{formatTime(result.time)}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+      <SiteFooter />
+    </div>
+  );
+}
