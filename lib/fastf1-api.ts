@@ -48,7 +48,7 @@ export class FastF1ApiClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = '/api/f1-fast';
+    this.baseUrl = '/api/f1-static';
   }
 
   async getRaceSchedule(year?: number): Promise<FastF1Race[]> {

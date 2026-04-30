@@ -112,8 +112,8 @@ export default function F1FastClient() {
             <p className="text-red-500 mb-4">{error}</p>
             <p className="text-sm text-gray-600 mb-4">
               {language === 'ja' 
-                ? 'FastF1 Pythonライブラリが必要です。サーバー環境にPythonとFastF1がインストールされていることを確認してください。'
-                : 'FastF1 Python library is required. Please ensure Python and FastF1 are installed on the server.'
+                ? '現在静的データを表示しています。リアルタイムデータは利用できません。'
+                : 'Currently displaying static data. Real-time data is not available.'
               }
             </p>
             <button
@@ -141,8 +141,8 @@ export default function F1FastClient() {
             </h1>
             <p className="text-gray-600 text-base md:text-lg">
               {language === 'ja' 
-                ? 'FastF1を使用したFormula 1の最新データ、ドライバー情報、レース結果'
-                : 'Latest Formula 1 data, driver information, and race results powered by FastF1'
+                ? 'Formula 1の最新データ、ドライバー情報、レース結果（静的データ）'
+                : 'Latest Formula 1 data, driver information, and race results (static data)'
               }
             </p>
           </div>
