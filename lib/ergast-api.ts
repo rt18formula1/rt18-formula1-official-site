@@ -40,7 +40,13 @@ export class ErgastApiClient {
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
 
-      const data: ErgastResponse<RaceTable> = await response.json();
+      const data: ErgastResponse<RaceTable> & { _fallback?: boolean; _error?: string } = await response.json();
+      
+      // フォールバックデータの場合は警告を表示
+      if (data._fallback) {
+        console.warn('Using fallback data for race schedule:', data._error);
+      }
+      
       return data.MRData.RaceTable?.Races || [];
     } catch (error) {
       console.error('Error fetching race schedule:', error);

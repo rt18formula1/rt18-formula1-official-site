@@ -131,8 +131,8 @@ export default function F1ErgastClient() {
             <p className="text-red-500 mb-4">{error}</p>
             <p className="text-sm text-gray-600 mb-4">
               {language === 'ja' 
-                ? 'Ergast APIからデータを取得しています。ネットワーク接続を確認してください。'
-                : 'Fetching data from Ergast API. Please check your network connection.'
+                ? 'フォールバックデータを表示しています。Ergast APIに接続できませんでした。'
+                : 'Displaying fallback data. Could not connect to Ergast API.'
               }
             </p>
             <button
