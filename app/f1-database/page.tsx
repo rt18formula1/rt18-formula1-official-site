@@ -1,9 +1,9 @@
-import F1ErgastClient from "@/components/f1-ergast-client";
+import F1OfficialClient from "@/components/f1-official-client";
 
 export default function F1DatabasePage() {
   return (
     <div className="min-h-screen bg-white text-black">
-      <F1ErgastClient />
+      <F1OfficialClient />
     </div>
   );
 }
