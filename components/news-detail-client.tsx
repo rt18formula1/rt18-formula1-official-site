@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useLanguage } from "@/components/providers/language-provider";
+import { generateImageProps } from "@/lib/seo-utils";
 import type { DbNews, DbPortfolio } from "@/lib/supabase-queries";
 import { ShareButtons } from "@/components/share-buttons";
 
@@ -55,7 +56,12 @@ export default function NewsDetailClient({
             <div key={index} className="my-8 border border-black/10 rounded-xl overflow-hidden bg-white shadow-sm max-w-sm mx-auto">
               <Link href={`/portfolio/${item.id}`}>
                 <div className="aspect-square relative bg-black/5">
-                  {item.image_url && <img src={item.image_url} alt={item.title_en} className="w-full h-full object-cover" />}
+                  {item.image_url && (() => {
+                        const imageProps = generateImageProps(item.image_url, item.title_en, "portfolio");
+                        return imageProps ? (
+                          <img {...imageProps} className="w-full h-full object-cover" />
+                        ) : null;
+                      })()}
                 </div>
                 <div className="p-4">
                   <h4 className="font-bold text-sm">{item.title_en}</h4>
@@ -83,7 +89,12 @@ export default function NewsDetailClient({
             <h1 className="text-2xl md:text-5xl font-black mb-6 md:mb-8 tracking-tighter leading-tight">{title}</h1>
             {newsItem.image_url && (
               <div className="aspect-video relative rounded-2xl md:rounded-3xl overflow-hidden bg-black/5 border border-black/10 shadow-xl">
-                <img src={newsItem.image_url} alt={title} className="w-full h-full object-cover" />
+                {(() => {
+                        const imageProps = generateImageProps(newsItem.image_url, title, "news");
+                        return imageProps ? (
+                          <img {...imageProps} className="w-full h-full object-cover" />
+                        ) : null;
+                      })()}
               </div>
             )}
           </header>

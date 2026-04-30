@@ -1,5 +1,7 @@
 "use client";
 
+import { generateImageProps } from "@/lib/seo-utils";
+
 interface AdminImageCardProps {
   id: string;
   title: string;
@@ -17,7 +19,7 @@ export function AdminImageCard({ id, title, imageUrl, date, onDelete, onAssign, 
     <div data-item-id={id} className="bg-white border border-black/10 rounded-lg overflow-hidden group hover:shadow-md transition-shadow">
       <div className="aspect-square bg-black/5 relative overflow-hidden flex items-center justify-center text-4xl">
         {imageUrl ? (
-          <img src={imageUrl} alt={title} className="w-full h-full object-cover" />
+          <img {...generateImageProps(imageUrl, title, type)} className="w-full h-full object-cover" />
         ) : (
           <span>{type === "news" ? "📰" : "🎨"}</span>
         )}

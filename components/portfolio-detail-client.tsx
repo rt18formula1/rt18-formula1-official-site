@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/components/providers/language-provider";
+import { generateImageProps } from "@/lib/seo-utils";
 import type { DbPortfolio } from "@/lib/supabase-queries";
 import Image from "next/image";
 
@@ -38,9 +39,12 @@ export default function PortfolioDetailClient({ portfolioItem }: { portfolioItem
           <p className="text-gray-500">{portfolioItem.created_at?.split("T")[0]}</p>
         </div>
         <div className="w-full bg-black/5 border border-black/10 rounded-lg overflow-hidden aspect-square md:aspect-video flex items-center justify-center text-7xl relative">
-          {portfolioItem.image_url ? (
-            <Image src={portfolioItem.image_url} alt="Portfolio image" fill className="object-cover" />
-          ) : (
+          {portfolioItem.image_url ? (() => {
+                        const imageProps = generateImageProps(portfolioItem.image_url, language === "ja" ? portfolioItem.title_ja || portfolioItem.title_en : portfolioItem.title_en, "portfolio");
+                        return imageProps ? (
+                          <Image {...imageProps} fill className="object-cover" />
+                        ) : null;
+                      })() : (
             <span>🎨</span>
           )}
         </div>

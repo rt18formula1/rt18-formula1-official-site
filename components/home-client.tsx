@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { useLanguage } from "@/components/providers/language-provider";
 import { linktreeLinks, snsLinks } from "@/lib/content";
+import { generateImageProps } from "@/lib/seo-utils";
 import type { DbNews, DbPortfolio, DbEvent } from "@/lib/supabase-queries";
 
 export default function HomeClient({ 
@@ -96,13 +97,15 @@ export default function HomeClient({
                   className="group bg-white border border-black/10 rounded-2xl overflow-hidden hover:shadow-2xl transition-all block"
                 >
                   <div className="w-full bg-black/5 border-b border-black/10 aspect-video relative overflow-hidden">
-                    {item.image_url ? (
-                      <img 
-                        src={item.image_url} 
-                        alt="" 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                      />
-                    ) : (
+                    {item.image_url ? (() => {
+                        const imageProps = generateImageProps(item.image_url, language === "ja" ? item.title_ja || item.title_en : item.title_en, "news");
+                        return imageProps ? (
+                          <img 
+                            {...imageProps}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                          />
+                        ) : null;
+                      })() : (
                       <div className="w-full h-full flex items-center justify-center text-4xl md:text-6xl">📰</div>
                     )}
                   </div>
@@ -142,9 +145,12 @@ export default function HomeClient({
                       className="w-full shrink-0 group border border-black/10 rounded-2xl overflow-hidden bg-white block"
                     >
                       <div className="aspect-square bg-black/5 relative overflow-hidden">
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
+                        {item.imageUrl ? (() => {
+                          const imageProps = generateImageProps(item.imageUrl, item.title, "portfolio");
+                          return imageProps ? (
+                            <img {...imageProps} className="w-full h-full object-cover" />
+                          ) : null;
+                        })() : (
                           <div className="w-full h-full flex items-center justify-center text-5xl">🎨</div>
                         )}
                       </div>
@@ -186,9 +192,12 @@ export default function HomeClient({
                       className="w-1/3 shrink-0 group border border-black/10 rounded-2xl overflow-hidden bg-white block px-2"
                     >
                       <div className="aspect-square bg-black/5 relative overflow-hidden">
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
+                        {item.imageUrl ? (() => {
+                          const imageProps = generateImageProps(item.imageUrl, item.title, "portfolio");
+                          return imageProps ? (
+                            <img {...imageProps} className="w-full h-full object-cover" />
+                          ) : null;
+                        })() : (
                           <div className="w-full h-full flex items-center justify-center text-5xl">🎨</div>
                         )}
                       </div>
@@ -366,7 +375,7 @@ export default function HomeClient({
                     className="flex items-center justify-center w-14 h-14 md:w-20 md:h-20 bg-white border border-black/10 rounded-2xl hover:bg-black/5 hover:scale-110 transition-all shadow-sm"
                     title={link.name}
                   >
-                    <img src={link.icon} alt={link.name} className="w-8 h-8 md:w-12 md:h-12 object-contain" />
+                    <img {...generateImageProps(link.icon, link.name, "sns")} className="w-8 h-8 md:w-12 md:h-12 object-contain" />
                   </a>
                 ))}
               </div>
