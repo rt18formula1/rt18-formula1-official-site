@@ -4,32 +4,31 @@ import { useState, useEffect } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useLanguage } from "@/components/providers/language-provider";
-import { openF1Api, type OpenF1Meeting, type OpenF1Session, type OpenF1Driver, type OpenF1SessionResult } from "@/lib/openf1-api";
+import { fastF1Api, type FastF1Race, type FastF1Driver, type FastF1Result } from "@/lib/fastf1-api";
 
-export default function F1DatabaseClient() {
+export default function F1FastClient() {
   const { language, t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [seasonCalendar, setSeasonCalendar] = useState<OpenF1Meeting[]>([]);
-  const [selectedMeeting, setSelectedMeeting] = useState<OpenF1Meeting | null>(null);
-  const [sessions, setSessions] = useState<OpenF1Session[]>([]);
-  const [drivers, setDrivers] = useState<OpenF1Driver[]>([]);
-  const [results, setResults] = useState<OpenF1SessionResult[]>([]);
-  const [activeTab, setActiveTab] = useState<'calendar' | 'meeting' | 'drivers' | 'results'>('calendar');
+  const [raceSchedule, setRaceSchedule] = useState<FastF1Race[]>([]);
+  const [selectedRace, setSelectedRace] = useState<FastF1Race | null>(null);
+  const [drivers, setDrivers] = useState<FastF1Driver[]>([]);
+  const [results, setResults] = useState<FastF1Result[]>([]);
+  const [activeTab, setActiveTab] = useState<'schedule' | 'race' | 'drivers' | 'results'>('schedule');
 
-  // 年間カレンダーを取得
+  // レーススケジュールを取得
   useEffect(() => {
-    const fetchSeasonCalendar = async () => {
+    const fetchRaceSchedule = async () => {
       try {
         setLoading(true);
         setError(null);
-        console.log('Fetching season calendar for year:', selectedYear);
-        const calendar = await openF1Api.getSeasonCalendar(selectedYear);
-        console.log('Calendar data received:', calendar);
-        setSeasonCalendar(calendar);
+        console.log('Fetching race schedule for year:', selectedYear);
+        const schedule = await fastF1Api.getRaceSchedule(selectedYear);
+        console.log('Race schedule received:', schedule.length);
+        setRaceSchedule(schedule);
       } catch (err) {
-        console.error('Error fetching season calendar:', err);
+        console.error('Error fetching race schedule:', err);
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         setError(`${language === 'ja' ? 'データの取得に失敗しました: ' : 'Failed to fetch data: '}${errorMessage}`);
       } finally {
@@ -37,40 +36,48 @@ export default function F1DatabaseClient() {
       }
     };
 
-    fetchSeasonCalendar();
+    fetchRaceSchedule();
   }, [selectedYear, language]);
 
-  // 選択されたミーティングの詳細を取得
+  // 選択されたレースの詳細を取得
   useEffect(() => {
-    if (selectedMeeting) {
-      const fetchMeetingDetails = async () => {
+    if (selectedRace) {
+      const fetchRaceDetails = async () => {
         try {
           setLoading(true);
-          const [meetingSessions, meetingDrivers, meetingResults] = await Promise.all([
-            openF1Api.getSessions({ meeting_key: selectedMeeting.meeting_key }),
-            openF1Api.getDrivers({ meeting_key: selectedMeeting.meeting_key }),
-            openF1Api.getSessionResults({ meeting_key: selectedMeeting.meeting_key }),
+          setError(null);
+          console.log('Fetching race details for:', selectedRace.name);
+          
+          const [raceDrivers, raceResults] = await Promise.all([
+            fastF1Api.getDrivers(selectedYear, selectedRace.round),
+            fastF1Api.getRaceResults(selectedYear, selectedRace.round),
           ]);
-          setSessions(meetingSessions);
-          setDrivers(meetingDrivers);
-          setResults(meetingResults);
+          
+          console.log('Drivers received:', raceDrivers.length);
+          console.log('Results received:', raceResults.length);
+          
+          setDrivers(raceDrivers);
+          setResults(raceResults);
         } catch (err) {
-          setError(language === 'ja' ? '詳細データの取得に失敗しました' : 'Failed to fetch meeting details');
+          console.error('Error fetching race details:', err);
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          setError(`${language === 'ja' ? '詳細データの取得に失敗しました: ' : 'Failed to fetch race details: '}${errorMessage}`);
         } finally {
           setLoading(false);
         }
       };
 
-      fetchMeetingDetails();
+      fetchRaceDetails();
     }
-  }, [selectedMeeting, language]);
+  }, [selectedRace, selectedYear, language]);
 
-  const handleMeetingSelect = (meeting: OpenF1Meeting) => {
-    setSelectedMeeting(meeting);
-    setActiveTab('meeting');
+  const handleRaceSelect = (race: FastF1Race) => {
+    setSelectedRace(race);
+    setActiveTab('race');
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'TBD';
     const date = new Date(dateString);
     return date.toLocaleDateString(language === 'ja' ? 'ja-JP' : 'en-US', {
       year: 'numeric',
@@ -79,15 +86,7 @@ export default function F1DatabaseClient() {
     });
   };
 
-  const formatTime = (timeString: string) => {
-    const date = new Date(timeString);
-    return date.toLocaleTimeString(language === 'ja' ? 'ja-JP' : 'en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  if (loading && seasonCalendar.length === 0) {
+  if (loading && raceSchedule.length === 0) {
     return (
       <div className="min-h-screen bg-white text-black flex flex-col">
         <SiteHeader />
@@ -95,7 +94,7 @@ export default function F1DatabaseClient() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
             <p className="text-gray-600">
-              {language === 'ja' ? '読み込み中...' : 'Loading...'}
+              {language === 'ja' ? 'FastF1データを読み込み中...' : 'Loading FastF1 data...'}
             </p>
           </div>
         </main>
@@ -109,8 +108,14 @@ export default function F1DatabaseClient() {
       <div className="min-h-screen bg-white text-black flex flex-col">
         <SiteHeader />
         <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
+          <div className="text-center max-w-md">
             <p className="text-red-500 mb-4">{error}</p>
+            <p className="text-sm text-gray-600 mb-4">
+              {language === 'ja' 
+                ? 'FastF1 Pythonライブラリが必要です。サーバー環境にPythonとFastF1がインストールされていることを確認してください。'
+                : 'FastF1 Python library is required. Please ensure Python and FastF1 are installed on the server.'
+              }
+            </p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
@@ -132,12 +137,12 @@ export default function F1DatabaseClient() {
           {/* ヘッダー */}
           <div className="mb-8">
             <h1 className="text-3xl md:text-5xl font-black mb-4">
-              {language === 'ja' ? 'F1データベース' : 'F1 Database'}
+              {language === 'ja' ? 'F1データベース (FastF1)' : 'F1 Database (FastF1)'}
             </h1>
             <p className="text-gray-600 text-base md:text-lg">
               {language === 'ja' 
-                ? 'Formula 1の最新データ、ドライバー情報、レース結果を確認'
-                : 'Check the latest Formula 1 data, driver information, and race results'
+                ? 'FastF1を使用したFormula 1の最新データ、ドライバー情報、レース結果'
+                : 'Latest Formula 1 data, driver information, and race results powered by FastF1'
               }
             </p>
           </div>
@@ -159,8 +164,8 @@ export default function F1DatabaseClient() {
           <div className="border-b border-black/10 mb-6">
             <div className="flex space-x-8">
               {[
-                { id: 'calendar', label: language === 'ja' ? 'カレンダー' : 'Calendar' },
-                { id: 'meeting', label: language === 'ja' ? 'レース詳細' : 'Race Details' },
+                { id: 'schedule', label: language === 'ja' ? 'スケジュール' : 'Schedule' },
+                { id: 'race', label: language === 'ja' ? 'レース詳細' : 'Race Details' },
                 { id: 'drivers', label: language === 'ja' ? 'ドライバー' : 'Drivers' },
                 { id: 'results', label: language === 'ja' ? '結果' : 'Results' },
               ].map((tab) => (
@@ -172,7 +177,7 @@ export default function F1DatabaseClient() {
                       ? 'border-black text-black font-black'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
-                  disabled={tab.id !== 'calendar' && !selectedMeeting}
+                  disabled={tab.id !== 'schedule' && !selectedRace}
                 >
                   {tab.label}
                 </button>
@@ -180,29 +185,35 @@ export default function F1DatabaseClient() {
             </div>
           </div>
 
-          {/* カレンダータブ */}
-          {activeTab === 'calendar' && (
+          {/* スケジュールタブ */}
+          {activeTab === 'schedule' && (
             <div className="space-y-4">
               <h2 className="text-2xl font-black mb-4">
-                {selectedYear} {language === 'ja' ? 'F1シーズンカレンダー' : 'F1 Season Calendar'}
+                {selectedYear} {language === 'ja' ? 'F1シーズンスケジュール' : 'F1 Season Schedule'}
               </h2>
               <div className="grid gap-4">
-                {seasonCalendar.map((meeting) => (
+                {raceSchedule.map((race) => (
                   <div
-                    key={meeting.meeting_key}
-                    onClick={() => handleMeetingSelect(meeting)}
+                    key={race.meeting_key}
+                    onClick={() => handleRaceSelect(race)}
                     className="border border-black/10 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white"
                   >
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                       <div>
-                        <h3 className="font-black text-lg mb-1">{meeting.meeting_name}</h3>
+                        <h3 className="font-black text-lg mb-1">{race.name}</h3>
                         <p className="text-gray-600 text-sm">
-                          {meeting.location} • {meeting.country_name}
+                          {race.location} • {race.country}
+                        </p>
+                        <p className="text-gray-500 text-xs mt-1">
+                          {race.circuit}
                         </p>
                       </div>
                       <div className="mt-2 md:mt-0 text-right">
                         <p className="text-sm text-gray-500">
-                          {formatDate(meeting.gmt_offset)}
+                          Round {race.round}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {formatDate(race.date)}
                         </p>
                       </div>
                     </div>
@@ -213,60 +224,63 @@ export default function F1DatabaseClient() {
           )}
 
           {/* レース詳細タブ */}
-          {activeTab === 'meeting' && selectedMeeting && (
+          {activeTab === 'race' && selectedRace && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-black mb-2">{selectedMeeting.meeting_name}</h2>
+                <h2 className="text-2xl font-black mb-2">{selectedRace.name}</h2>
                 <p className="text-gray-600">
-                  {selectedMeeting.location} • {selectedMeeting.country_name}
+                  {selectedRace.location} • {selectedRace.country}
+                </p>
+                <p className="text-gray-500 text-sm">
+                  {selectedRace.circuit} • Round {selectedRace.round}
                 </p>
               </div>
 
-              <div>
+              <div className="bg-gray-50 p-6 rounded-lg">
                 <h3 className="font-black text-lg mb-3">
-                  {language === 'ja' ? 'セッション' : 'Sessions'}
+                  {language === 'ja' ? 'レース情報' : 'Race Information'}
                 </h3>
-                <div className="grid gap-3">
-                  {sessions.map((session) => (
-                    <div key={session.session_key} className="border border-black/5 rounded-lg p-3">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{session.session_name}</p>
-                          <p className="text-sm text-gray-500">{session.session_type}</p>
-                        </div>
-                        <div className="text-right text-sm text-gray-500">
-                          <p>{formatDate(session.date_start)}</p>
-                          <p>{formatTime(session.date_start)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="font-medium">{language === 'ja' ? '開催日' : 'Date'}</p>
+                    <p className="text-gray-600">{formatDate(selectedRace.date)}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium">{language === 'ja' ? 'サーキット' : 'Circuit'}</p>
+                    <p className="text-gray-600">{selectedRace.circuit}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium">{language === 'ja' ? '場所' : 'Location'}</p>
+                    <p className="text-gray-600">{selectedRace.location}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium">{language === 'ja' ? 'ラウンド' : 'Round'}</p>
+                    <p className="text-gray-600">{selectedRace.round}</p>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {/* ドライバータブ */}
-          {activeTab === 'drivers' && selectedMeeting && (
+          {activeTab === 'drivers' && selectedRace && (
             <div className="space-y-6">
               <h2 className="text-2xl font-black">
                 {language === 'ja' ? '参加ドライバー' : 'Participating Drivers'}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {drivers.map((driver) => (
-                  <div key={`${driver.driver_number}-${driver.session_key}`} className="border border-black/10 rounded-lg p-4 bg-white">
+                  <div key={driver.driver_number} className="border border-black/10 rounded-lg p-4 bg-white">
                     <div className="flex items-center space-x-3">
-                      {driver.headshot_url && (
-                        <img
-                          src={driver.headshot_url}
-                          alt={driver.full_name}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
-                      )}
+                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                        <span className="font-black text-sm">#{driver.driver_number}</span>
+                      </div>
                       <div>
                         <p className="font-black">{driver.full_name}</p>
                         <p className="text-sm text-gray-600">{driver.team_name}</p>
-                        <p className="text-xs text-gray-500">#{driver.driver_number}</p>
+                        {driver.abbreviation && (
+                          <p className="text-xs text-gray-500">{driver.abbreviation}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -276,7 +290,7 @@ export default function F1DatabaseClient() {
           )}
 
           {/* 結果タブ */}
-          {activeTab === 'results' && selectedMeeting && (
+          {activeTab === 'results' && selectedRace && (
             <div className="space-y-6">
               <h2 className="text-2xl font-black">
                 {language === 'ja' ? 'レース結果' : 'Race Results'}
@@ -292,6 +306,7 @@ export default function F1DatabaseClient() {
                       <th className="text-left py-3 px-4 font-black text-sm">
                         {language === 'ja' ? 'チーム' : 'Team'}
                       </th>
+                      <th className="text-left py-3 px-4 font-black text-sm">GRID</th>
                       <th className="text-right py-3 px-4 font-black text-sm">PTS</th>
                     </tr>
                   </thead>
@@ -299,15 +314,16 @@ export default function F1DatabaseClient() {
                     {results
                       .sort((a, b) => a.position - b.position)
                       .map((result) => (
-                        <tr key={`${result.session_key}-${result.driver_number}`} className="border-b border-black/5">
+                        <tr key={result.driver_number} className="border-b border-black/5">
                           <td className="py-3 px-4 font-medium">{result.position}</td>
                           <td className="py-3 px-4">
                             <div className="flex items-center space-x-2">
-                              <span className="font-medium">{result.full_name}</span>
+                              <span className="font-medium">{result.driver_name}</span>
                               <span className="text-xs text-gray-500">#{result.driver_number}</span>
                             </div>
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-600">{result.team_name}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{result.grid_position}</td>
                           <td className="py-3 px-4 text-right font-medium">{result.points}</td>
                         </tr>
                       ))}
