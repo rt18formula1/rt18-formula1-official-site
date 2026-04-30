@@ -112,8 +112,8 @@ export default function F1OfficialClient() {
             <p className="text-red-500 mb-4">{error}</p>
             <p className="text-sm text-gray-600 mb-4">
               {language === 'ja' 
-                ? 'F1公式サイトからデータを取得しています。スクレイピングに時間がかかる場合があります。'
-                : 'Fetching data from F1 Official website. Scraping may take some time.'
+                ? 'F1公式サイトデータを表示しています。安定性のため静的データを使用しています。'
+                : 'Displaying F1 Official website data. Using static data for stability.'
               }
             </p>
             <button
