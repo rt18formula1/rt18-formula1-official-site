@@ -280,25 +280,51 @@ async function getPitStops(year: number, round: number): Promise<any> {
   }
 }
 
-// 各セッションの結果を取得
+// Alpha API用のデータ取得
+async function fetchFromAlphaAPI(endpoint: string): Promise<any> {
+  try {
+    console.log(`Fetching from Alpha API: ${endpoint}`);
+    const response = await fetch(`https://api.jolpi.ca/f1/alpha${endpoint}`);
+    
+    if (!response.ok) {
+      throw new Error(`Alpha API HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching from Alpha API:', error);
+    throw error;
+  }
+}
+
+// 各セッションの結果を取得（Alpha API + 従来APIの統合）
 async function getSessionResults(year: number, round: number, session: string): Promise<any> {
   try {
     let endpoint = '';
+    let useAlphaAPI = false;
     
     switch (session) {
       case 'fp1':
-        endpoint = `/${year}/${round}/fp1.json?limit=100`;
+        // Alpha APIを優先、フォールバックで従来API
+        useAlphaAPI = true;
+        endpoint = `/results/${round}/FP1`;
         break;
       case 'fp2':
-        endpoint = `/${year}/${round}/fp2.json?limit=100`;
+        useAlphaAPI = true;
+        endpoint = `/results/${round}/FP2`;
         break;
       case 'fp3':
-        endpoint = `/${year}/${round}/fp3.json?limit=100`;
+        useAlphaAPI = true;
+        endpoint = `/results/${round}/FP3`;
         break;
       case 'sprint-qualifying':
-        endpoint = `/${year}/${round}/sprint/qualifying.json?limit=100`;
+        // Sprint QualifyingはAlpha APIのみ
+        useAlphaAPI = true;
+        endpoint = `/results/${round}/SQ`;
         break;
       case 'sprint':
+        // Sprint Raceは従来APIを優先
         endpoint = `/${year}/${round}/sprint.json?limit=100`;
         break;
       case 'qualifying':
@@ -312,7 +338,32 @@ async function getSessionResults(year: number, round: number, session: string): 
     }
     
     console.log(`Fetching ${session} results for year: ${year}, round: ${round}`);
-    const response = await fetchFromJolpica(endpoint);
+    
+    let response;
+    if (useAlphaAPI) {
+      try {
+        // Alpha APIを試す
+        response = await fetchFromAlphaAPI(endpoint);
+        console.log(`Successfully fetched ${session} from Alpha API`);
+      } catch (alphaError) {
+        console.warn(`Alpha API failed for ${session}, falling back to traditional API:`, alphaError);
+        
+        // Alpha APIが失敗した場合、従来APIにフォールバック
+        if (session.startsWith('fp')) {
+          endpoint = `/${year}/${round}/${session}.json?limit=100`;
+          response = await fetchFromJolpica(endpoint);
+        } else if (session === 'sprint-qualifying') {
+          endpoint = `/${year}/${round}/sprint/qualifying.json?limit=100`;
+          response = await fetchFromJolpica(endpoint);
+        } else {
+          throw alphaError;
+        }
+      }
+    } else {
+      // 従来APIを使用
+      response = await fetchFromJolpica(endpoint);
+    }
+    
     return response;
   } catch (error) {
     console.error(`Error fetching ${session} results:`, error);

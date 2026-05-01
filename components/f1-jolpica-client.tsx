@@ -520,7 +520,7 @@ export default function F1JolpicaClient() {
             ) : (
               <div>
                 {/* セッションデータ表示 */}
-                {sessionData?.data?.MRData?.RaceTable?.Races?.[0] && (
+                {(sessionData?.data?.MRData?.RaceTable?.Races?.[0] || sessionData?.data?.Results) && (
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                     <h3 className="font-black text-lg mb-4">
                       {raceSessionTab === 'fp1' && (language === 'ja' ? 'フリー practice 1' : 'Free Practice 1')}
@@ -547,7 +547,10 @@ export default function F1JolpicaClient() {
                               </>
                             )}
                             {(raceSessionTab === 'fp1' || raceSessionTab === 'fp2' || raceSessionTab === 'fp3') && (
-                              <th className="text-left py-2 px-3">{language === 'ja' ? 'タイム' : 'Time'}</th>
+                              <>
+                                <th className="text-left py-2 px-3">{language === 'ja' ? 'タイム' : 'Time'}</th>
+                                <th className="text-left py-2 px-3">{language === 'ja' ? 'ラップ' : 'Laps'}</th>
+                              </>
                             )}
                             {(raceSessionTab === 'sprint' || raceSessionTab === 'race') && (
                               <>
@@ -559,21 +562,34 @@ export default function F1JolpicaClient() {
                         </thead>
                         <tbody>
                           {(() => {
-                            const race = sessionData.data.MRData.RaceTable.Races[0];
-                            const results = race.Results || race.QualifyingResults || [];
+                            // Alpha APIと従来APIの両方に対応
+                            let results = [];
+                            
+                            if (sessionData.data?.MRData?.RaceTable?.Races?.[0]) {
+                              // 従来APIのデータ構造
+                              const race = sessionData.data.MRData.RaceTable.Races[0];
+                              results = race.Results || race.QualifyingResults || [];
+                            } else if (sessionData.data?.Results) {
+                              // Alpha APIのデータ構造
+                              results = sessionData.data.Results;
+                            }
                             
                             return results.slice(0, 20).map((result: any, index: number) => (
-                              <tr key={result.Driver?.driverId || index} className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-2 px-3 font-medium">{result.position || index + 1}</td>
+                              <tr key={result.Driver?.driverId || result.DriverId || index} className="border-b border-gray-100 hover:bg-gray-50">
+                                <td className="py-2 px-3 font-medium">{result.position || result.Position || index + 1}</td>
                                 <td className="py-2 px-3">
                                   <div className="flex items-center space-x-2">
                                     <span className="font-medium">
-                                      {result.Driver?.givenName} {result.Driver?.familyName}
+                                      {result.Driver?.givenName || result.GivenName} {result.Driver?.familyName || result.FamilyName}
                                     </span>
-                                    <span className="text-gray-500 text-xs">({result.Driver?.code})</span>
+                                    <span className="text-gray-500 text-xs">
+                                      ({result.Driver?.code || result.Code || result.DriverId})
+                                    </span>
                                   </div>
                                 </td>
-                                <td className="py-2 px-3 text-gray-600">{result.Constructor?.name}</td>
+                                <td className="py-2 px-3 text-gray-600">
+                                  {result.Constructor?.name || result.ConstructorName || '-'}
+                                </td>
                                 
                                 {(raceSessionTab === 'qualifying' || raceSessionTab === 'sprint-qualifying') && (
                                   <>
@@ -584,15 +600,24 @@ export default function F1JolpicaClient() {
                                 )}
                                 
                                 {(raceSessionTab === 'fp1' || raceSessionTab === 'fp2' || raceSessionTab === 'fp3') && (
-                                  <td className="py-2 px-3">{result.Time?.time || '-'}</td>
+                                  <>
+                                    <td className="py-2 px-3">
+                                      {result.Time?.time || result.Time || result.BestTime || '-'}
+                                    </td>
+                                    <td className="py-2 px-3">
+                                      {result.Laps || result.TotalLaps || '-'}
+                                    </td>
+                                  </>
                                 )}
                                 
                                 {(raceSessionTab === 'sprint' || raceSessionTab === 'race') && (
                                   <>
                                     <td className="py-2 px-3 text-gray-600">
-                                      {result.Time?.time || result.status || '-'}
+                                      {result.Time?.time || result.Time || result.Status || '-'}
                                     </td>
-                                    <td className="py-2 px-3 font-bold text-red-600">{result.points || '0'}</td>
+                                    <td className="py-2 px-3 font-bold text-red-600">
+                                      {result.points || result.Points || '0'}
+                                    </td>
                                   </>
                                 )}
                               </tr>
@@ -601,11 +626,19 @@ export default function F1JolpicaClient() {
                         </tbody>
                       </table>
                     </div>
+                    
+                    {/* API情報表示 */}
+                    <div className="mt-4 text-xs text-gray-500">
+                      {sessionData.data?.MRData ? 
+                        (language === 'ja' ? 'データソース: Jolpica 従来API' : 'Data source: Jolpica Traditional API') :
+                        (language === 'ja' ? 'データソース: Jolpica Alpha API' : 'Data source: Jolpica Alpha API')
+                      }
+                    </div>
                   </div>
                 )}
 
                 {/* データがない場合 */}
-                {!sessionData?.data?.MRData?.RaceTable?.Races?.[0] && (
+                {(!sessionData?.data?.MRData?.RaceTable?.Races?.[0] && !sessionData?.data?.Results) && (
                   <div className="text-center py-8 bg-gray-50 rounded-lg">
                     <p className="text-gray-500">
                       {language === 'ja' 
@@ -617,6 +650,11 @@ export default function F1JolpicaClient() {
                         ? 'セッションが開始されるとデータが表示されます' 
                         : 'Data will be displayed once session begins'}
                     </p>
+                    {sessionData && (
+                      <p className="text-xs text-gray-400 mt-2">
+                        {language === 'ja' ? 'API応答あり、データ構造が異なります' : 'API response received, but data structure is different'}
+                      </p>
+                    )}
                   </div>
                 )}
 
