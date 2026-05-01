@@ -234,7 +234,9 @@ export default function F1JolpicaClient() {
       
       setSessionData(sessionResults);
       
-      console.log(`Fetched ${raceSessionTab} data for ${selectedRace.name}`);
+      // デバッグ情報をコンソールに出力
+      console.log(`Fetched ${raceSessionTab} data for ${selectedRace.name}:`, sessionResults);
+      console.log('Data structure:', JSON.stringify(sessionResults, null, 2));
       
     } catch (error) {
       console.error(`Error fetching ${raceSessionTab} data:`, error);
@@ -650,10 +652,29 @@ export default function F1JolpicaClient() {
                         ? 'セッションが開始されるとデータが表示されます' 
                         : 'Data will be displayed once session begins'}
                     </p>
+                    
+                    {/* デバッグ情報 */}
                     {sessionData && (
-                      <p className="text-xs text-gray-400 mt-2">
-                        {language === 'ja' ? 'API応答あり、データ構造が異なります' : 'API response received, but data structure is different'}
-                      </p>
+                      <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left">
+                        <p className="text-xs text-gray-600 mb-2">
+                          {language === 'ja' ? 'デバッグ情報:' : 'Debug Info:'}
+                        </p>
+                        <div className="text-xs font-mono text-gray-700">
+                          <p>{language === 'ja' ? 'APIレスポンス構造:' : 'API Response Structure:'}</p>
+                          <pre className="mt-2 p-2 bg-white rounded border text-xs overflow-auto max-h-40">
+                            {JSON.stringify(sessionData, null, 2)}
+                          </pre>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-600">
+                          <p>{language === 'ja' ? '確認するキー:' : 'Keys to check:'}</p>
+                          <ul className="mt-1 ml-4">
+                            <li>data.MRData.RaceTable.Races[0]</li>
+                            <li>data.Results</li>
+                            <li>data.MRData (従来API)</li>
+                            <li>data.Results (Alpha API)</li>
+                          </ul>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}

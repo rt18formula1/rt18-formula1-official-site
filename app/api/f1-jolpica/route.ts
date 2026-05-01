@@ -284,13 +284,20 @@ async function getPitStops(year: number, round: number): Promise<any> {
 async function fetchFromAlphaAPI(endpoint: string): Promise<any> {
   try {
     console.log(`Fetching from Alpha API: ${endpoint}`);
-    const response = await fetch(`https://api.jolpi.ca/f1/alpha${endpoint}`);
+    const fullUrl = `https://api.jolpi.ca/f1/alpha${endpoint}`;
+    console.log(`Full Alpha API URL: ${fullUrl}`);
+    
+    const response = await fetch(fullUrl);
+    
+    console.log(`Alpha API Response Status: ${response.status}`);
     
     if (!response.ok) {
+      console.error(`Alpha API HTTP error! status: ${response.status}`);
       throw new Error(`Alpha API HTTP error! status: ${response.status}`);
     }
     
     const data = await response.json();
+    console.log(`Alpha API Response Data:`, JSON.stringify(data, null, 2));
     return data;
   } catch (error) {
     console.error('Error fetching from Alpha API:', error);
