@@ -305,75 +305,162 @@ async function fetchFromAlphaAPI(endpoint: string): Promise<any> {
   }
 }
 
+// Alpha APIからセッションIDを取得
+async function getSessionIdFromAlpha(year: number, round: number, sessionType: string): Promise<string> {
+  try {
+    // セッションタイプのマッピング
+    const sessionTypeMapping: { [key: string]: string } = {
+      'fp1': 'FP1',
+      'fp2': 'FP2', 
+      'fp3': 'FP3',
+      'qualifying': 'Q',
+      'sprint-qualifying': 'SQ',
+      'sprint': 'S',
+      'race': 'R'
+    };
+    
+    const mappedType = sessionTypeMapping[sessionType];
+    if (!mappedType) {
+      throw new Error(`Unknown session type: ${sessionType}`);
+    }
+    
+    // セッションを検索
+    const sessionsUrl = `/core/sessions/?round_number=${round}&type=${mappedType}`;
+    const sessionsData = await fetchFromAlphaAPI(sessionsUrl);
+    
+    if (!sessionsData.data || sessionsData.data.length === 0) {
+      throw new Error(`No session found for year ${year}, round ${round}, type ${mappedType}`);
+    }
+    
+    // 最初のセッションIDを返す
+    return sessionsData.data[0].id;
+  } catch (error) {
+    console.error('Error getting session ID from Alpha API:', error);
+    throw error;
+  }
+}
+
 // 各セッションの結果を取得（Alpha API + 従来APIの統合）
 async function getSessionResults(year: number, round: number, session: string): Promise<any> {
   try {
-    let endpoint = '';
-    let useAlphaAPI = false;
-    
-    switch (session) {
-      case 'fp1':
-        // Alpha APIを優先、フォールバックで従来API
-        useAlphaAPI = true;
-        endpoint = `/results/${round}/FP1`;
-        break;
-      case 'fp2':
-        useAlphaAPI = true;
-        endpoint = `/results/${round}/FP2`;
-        break;
-      case 'fp3':
-        useAlphaAPI = true;
-        endpoint = `/results/${round}/FP3`;
-        break;
-      case 'sprint-qualifying':
-        // Sprint QualifyingはAlpha APIのみ
-        useAlphaAPI = true;
-        endpoint = `/results/${round}/SQ`;
-        break;
-      case 'sprint':
-        // Sprint Raceは従来APIを優先
-        endpoint = `/${year}/${round}/sprint.json?limit=100`;
-        break;
-      case 'qualifying':
-        endpoint = `/${year}/${round}/qualifying.json?limit=100`;
-        break;
-      case 'race':
-        endpoint = `/${year}/${round}/results.json?limit=100`;
-        break;
-      default:
-        throw new Error(`Unknown session type: ${session}`);
-    }
-    
     console.log(`Fetching ${session} results for year: ${year}, round: ${round}`);
     
     let response;
-    if (useAlphaAPI) {
+    
+    // Alpha APIを試みるセッションタイプ
+    const alphaSessions = ['fp1', 'fp2', 'fp3', 'sprint-qualifying'];
+    
+    if (alphaSessions.includes(session)) {
       try {
-        // Alpha APIを試す
-        response = await fetchFromAlphaAPI(endpoint);
-        console.log(`Successfully fetched ${session} from Alpha API`);
+        // Alpha APIからセッションIDを取得
+        const sessionId = await getSessionIdFromAlpha(year, round, session);
+        console.log(`Found session ID: ${sessionId} for ${session}`);
+        
+        // セッションエントリーを取得
+        const entriesUrl = `/core/session-entries/?session_id=${sessionId}`;
+        response = await fetchFromAlphaAPI(entriesUrl);
+        
+        // Alpha APIのデータ構造を従来API互換に変換
+        const convertedData = convertAlphaToTraditional(response, session);
+        console.log(`Successfully fetched ${session} from Alpha API and converted`);
+        return convertedData;
+        
       } catch (alphaError) {
         console.warn(`Alpha API failed for ${session}, falling back to traditional API:`, alphaError);
         
         // Alpha APIが失敗した場合、従来APIにフォールバック
-        if (session.startsWith('fp')) {
-          endpoint = `/${year}/${round}/${session}.json?limit=100`;
-          response = await fetchFromJolpica(endpoint);
-        } else if (session === 'sprint-qualifying') {
-          endpoint = `/${year}/${round}/sprint/qualifying.json?limit=100`;
-          response = await fetchFromJolpica(endpoint);
-        } else {
-          throw alphaError;
-        }
+        const fallbackEndpoint = session.startsWith('fp') 
+          ? `/${year}/${round}/${session}.json?limit=100`
+          : `/${year}/${round}/sprint/qualifying.json?limit=100`;
+        
+        response = await fetchFromJolpica(fallbackEndpoint);
+        return response;
       }
     } else {
-      // 従来APIを使用
+      // Sprint, Qualifying, Raceは従来APIを使用
+      let endpoint = '';
+      switch (session) {
+        case 'sprint':
+          endpoint = `/${year}/${round}/sprint.json?limit=100`;
+          break;
+        case 'qualifying':
+          endpoint = `/${year}/${round}/qualifying.json?limit=100`;
+          break;
+        case 'race':
+          endpoint = `/${year}/${round}/results.json?limit=100`;
+          break;
+        default:
+          throw new Error(`Unknown session type: ${session}`);
+      }
+      
       response = await fetchFromJolpica(endpoint);
+      return response;
     }
-    
-    return response;
   } catch (error) {
     console.error(`Error fetching ${session} results:`, error);
+    throw error;
+  }
+}
+
+// Alpha APIデータを従来API形式に変換
+function convertAlphaToTraditional(alphaData: any, sessionType: string): any {
+  try {
+    if (!alphaData.data || !Array.isArray(alphaData.data)) {
+      throw new Error('Invalid Alpha API data structure');
+    }
+    
+    const entries = alphaData.data;
+    
+    // 従来API互換のデータ構造を作成
+    const results = entries.map((entry: any) => {
+      const result: any = {
+        position: entry.position.toString(),
+        Driver: {
+          driverId: entry.driver?.id || '',
+          givenName: entry.driver?.given_name || '',
+          familyName: entry.driver?.family_name || '',
+          code: entry.driver?.given_name?.substring(0, 3)?.toUpperCase() || ''
+        },
+        Constructor: {
+          name: entry.team?.name || ''
+        },
+        points: entry.points?.toString() || '0'
+      };
+      
+      // セッションタイプに応じたタイム情報を追加
+      if (sessionType.startsWith('fp')) {
+        result.Time = {
+          time: entry.time_display || entry.time || ''
+        };
+        result.Laps = entry.laps_completed?.toString() || '0';
+      } else if (sessionType === 'qualifying' || sessionType === 'sprint-qualifying') {
+        // Qualifyingセッションの場合、Q1, Q2, Q3を追加（Alpha APIでは単一タイムのみ）
+        result.Q1 = entry.time_display || entry.time || '';
+        result.Q2 = '';
+        result.Q3 = '';
+      } else if (sessionType === 'sprint' || sessionType === 'race') {
+        result.Time = {
+          time: entry.time_display || entry.status || ''
+        };
+        result.status = entry.status_display || entry.status || '';
+        result.laps = entry.laps_completed?.toString() || '0';
+      }
+      
+      return result;
+    });
+    
+    // 従来APIのレスポンス形式で返す
+    return {
+      MRData: {
+        RaceTable: {
+          Races: [{
+            Results: results
+          }]
+        }
+      }
+    };
+  } catch (error) {
+    console.error('Error converting Alpha API data:', error);
     throw error;
   }
 }
