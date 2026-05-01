@@ -17,7 +17,7 @@ export default function F1JolpicaClient() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'details' | 'standings' | 'alldata'>('schedule');
   const [standingsTab, setStandingsTab] = useState<'drivers' | 'constructors'>('drivers');
   const [allDataTab, setAllDataTab] = useState<'qualifying' | 'circuits' | 'drivers' | 'constructors' | 'laps' | 'pitstops'>('qualifying');
-  const [raceSessionTab, setRaceSessionTab] = useState<'fp1' | 'fp2' | 'fp3' | 'sprint-qualifying' | 'sprint' | 'qualifying' | 'race'>('race');
+  const [raceSessionTab, setRaceSessionTab] = useState<'sprint' | 'qualifying' | 'race'>('race');
   const [apiStatus, setApiStatus] = useState<{ isAvailable: boolean; responseTime?: number; error?: string } | null>(null);
   const [driverStandings, setDriverStandings] = useState<any>(null);
   const [constructorStandings, setConstructorStandings] = useState<any>(null);
@@ -436,39 +436,9 @@ export default function F1JolpicaClient() {
               {selectedRace.name} - {selectedYear}
             </h2>
 
-            {/* セッション選択サブタブ */}
+            {/* セッション選択サブタブ（利用可能なセッションのみ） */}
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex space-x-8">
-                <button
-                  onClick={() => setRaceSessionTab('fp1')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    raceSessionTab === 'fp1'
-                      ? 'border-red-500 text-red-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  FP1
-                </button>
-                <button
-                  onClick={() => setRaceSessionTab('fp2')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    raceSessionTab === 'fp2'
-                      ? 'border-red-500 text-red-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  FP2
-                </button>
-                <button
-                  onClick={() => setRaceSessionTab('fp3')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    raceSessionTab === 'fp3'
-                      ? 'border-red-500 text-red-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  FP3
-                </button>
                 <button
                   onClick={() => setRaceSessionTab('qualifying')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -478,16 +448,6 @@ export default function F1JolpicaClient() {
                   }`}
                 >
                   {language === 'ja' ? '予選' : 'Qualifying'}
-                </button>
-                <button
-                  onClick={() => setRaceSessionTab('sprint-qualifying')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    raceSessionTab === 'sprint-qualifying'
-                      ? 'border-red-500 text-red-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  {language === 'ja' ? 'スプリント予選' : 'Sprint Qualifying'}
                 </button>
                 <button
                   onClick={() => setRaceSessionTab('sprint')}
@@ -525,11 +485,7 @@ export default function F1JolpicaClient() {
                 {(sessionData?.data?.MRData?.RaceTable?.Races?.[0] || sessionData?.data?.Results) && (
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                     <h3 className="font-black text-lg mb-4">
-                      {raceSessionTab === 'fp1' && (language === 'ja' ? 'フリー practice 1' : 'Free Practice 1')}
-                      {raceSessionTab === 'fp2' && (language === 'ja' ? 'フリー practice 2' : 'Free Practice 2')}
-                      {raceSessionTab === 'fp3' && (language === 'ja' ? 'フリー practice 3' : 'Free Practice 3')}
                       {raceSessionTab === 'qualifying' && (language === 'ja' ? '予選結果' : 'Qualifying Results')}
-                      {raceSessionTab === 'sprint-qualifying' && (language === 'ja' ? 'スプリント予選結果' : 'Sprint Qualifying Results')}
                       {raceSessionTab === 'sprint' && (language === 'ja' ? 'スプリントレース結果' : 'Sprint Race Results')}
                       {raceSessionTab === 'race' && (language === 'ja' ? 'レース結果' : 'Race Results')}
                     </h3>
@@ -541,23 +497,18 @@ export default function F1JolpicaClient() {
                             <th className="text-left py-2 px-3">{language === 'ja' ? '順位' : 'Pos'}</th>
                             <th className="text-left py-2 px-3">{language === 'ja' ? 'ドライバー' : 'Driver'}</th>
                             <th className="text-left py-2 px-3">{language === 'ja' ? 'チーム' : 'Team'}</th>
-                            {(raceSessionTab === 'qualifying' || raceSessionTab === 'sprint-qualifying') && (
+                            {raceSessionTab === 'qualifying' && (
                               <>
                                 <th className="text-left py-2 px-3">Q1</th>
                                 <th className="text-left py-2 px-3">Q2</th>
                                 <th className="text-left py-2 px-3">Q3</th>
                               </>
                             )}
-                            {(raceSessionTab === 'fp1' || raceSessionTab === 'fp2' || raceSessionTab === 'fp3') && (
-                              <>
-                                <th className="text-left py-2 px-3">{language === 'ja' ? 'タイム' : 'Time'}</th>
-                                <th className="text-left py-2 px-3">{language === 'ja' ? 'ラップ' : 'Laps'}</th>
-                              </>
-                            )}
                             {(raceSessionTab === 'sprint' || raceSessionTab === 'race') && (
                               <>
-                                <th className="text-left py-2 px-3">{language === 'ja' ? 'タイム' : 'Time'}</th>
-                                <th className="text-left py-2 px-3">{language === 'ja' ? 'ポイント' : 'Points'}</th>
+                                <th className="text-left py-2 px-3">{language === 'ja' ? 'タイム/差' : 'Time/Gap'}</th>
+                                <th className="text-left py-2 px-3">{language === 'ja' ? 'ラップ' : 'Laps'}</th>
+                                <th className="text-left py-2 px-3">{language === 'ja' ? 'ステータス' : 'Status'}</th>
                               </>
                             )}
                           </tr>
@@ -593,22 +544,11 @@ export default function F1JolpicaClient() {
                                   {result.Constructor?.name || result.ConstructorName || '-'}
                                 </td>
                                 
-                                {(raceSessionTab === 'qualifying' || raceSessionTab === 'sprint-qualifying') && (
+                                {raceSessionTab === 'qualifying' && (
                                   <>
                                     <td className="py-2 px-3">{result.Q1 || '-'}</td>
                                     <td className="py-2 px-3">{result.Q2 || '-'}</td>
                                     <td className="py-2 px-3">{result.Q3 || '-'}</td>
-                                  </>
-                                )}
-                                
-                                {(raceSessionTab === 'fp1' || raceSessionTab === 'fp2' || raceSessionTab === 'fp3') && (
-                                  <>
-                                    <td className="py-2 px-3">
-                                      {result.Time?.time || result.Time || result.BestTime || '-'}
-                                    </td>
-                                    <td className="py-2 px-3">
-                                      {result.Laps || result.TotalLaps || '-'}
-                                    </td>
                                   </>
                                 )}
                                 
