@@ -1,87 +1,379 @@
-## 現状 (2026-04-25 更新)
+# rt18_formula1 Official Site - DEVELOPMENT.md
+最終更新: 2026-04-29
+
+---
+
+## 重要: AIエージェントへの指示
+
+このファイルはCursor・Codex・Antigravity・Devinなど複数のAIエージェントが共有する設計書です。
+- **作業前に必ずこのファイルを全部読んでください**
+- **作業完了後は進捗セクションを更新してください**
+- **同時に複数のエージェントが同じファイルを触らないようにしてください**
+- **作業前に必ず `git pull` してください**
+
+---
+
+## プロジェクト概要
 
 - **サイトURL**: https://rt18-formula1-official-site.vercel.app
-- **DB**: Supabase (PostgreSQL) 実装完了
-- **ストレージ**: Cloudflare R2 実装完了 (Supabase Storage から移行)
-- **認証**: Admin 認証 (Cookieベース) 実装完了
-- **PWA**: 対応完了 (ホーム画面追加可能)
+- **構成**: Next.js (React), Vercel deploy, GitHub連携済み
+- **DB**: Supabase (PostgreSQL)
+- **画像ストレージ**: Cloudflare R2
+- **認証**: Admin認証 (Cookieベース) 実装済み / ユーザー認証はSupabase Auth (実装予定)
+- **メール**: Resend (実装予定)
+- **決済**: Stripe (実装予定)
 
 ---
 
-## 完了済み (直近の作業)
+## 技術スタック
 
-### 1. システム・基盤
-- **ビルドエラー解消**: Supabase 環境変数が欠けている環境でもビルドが通るようガードを実装。
-- **PWA化**: `manifest.ts` の作成と `appleWebApp` メタタグの設定。iOS/Android でアプリのように動作。
-- **ストレージ移行**: 画像保存先を Supabase Storage から Cloudflare R2 に変更（パフォーマンスとコスト最適化）。
-- **シェア機能刷新**: X (Twitter)、リンクコピー、OSネイティブシェアを統合。Instagram ストーリーズは検討の末削除。
-
-### 2. UI/UX 改善
-- **ヘッダー**: News 詳細ページでもヘッダーを固定表示。
-- **デザイン**: 
-  - セクション名の下の二重線を削除（シンプル化）。
-  - セクション間の余白（前セクションの境界線と次セクションのタイトル間）を短縮。
-- **Portfolio グリッド**:
-  - 6列から3列に変更し、画像を大型化。
-  - 画像下のタイトル・テキスト表示を追加。
-- **管理画面**:
-  - 投稿エラー（HTTP 413 等）の可視化。
-  - 画像アップロード失敗時に投稿をブロックするガード実装。
+| 用途 | サービス |
+|---|---|
+| ホスティング | Vercel |
+| DB | Supabase PostgreSQL |
+| 画像ストレージ | Cloudflare R2 |
+| ユーザー認証 | Supabase Auth |
+| メール送信 | Resend |
+| 決済 | Stripe |
+| 郵便番号自動入力 | zipcloud (無料API) |
 
 ---
 
-## 現在の課題と解決方針
+## 画像の仕組み
 
-### 課題: 画像アップロードの 4.5MB 制限 (HTTP 413)
-- **原因**: Vercel の API Route（サーバーレス関数）には 4.5MB のペイロード制限がある。高画質な画像を送ると Vercel 側で遮断される。
-- **解決策**: **署名付きURL (Presigned URL)** 方式への切り替え。
-  - Vercel は「アップロード権限」のみを発行し、ブラウザが直接 Cloudflare R2 へ大容量ファイルを送信する。
-
-### 2026-04-26 追記: HTTP 413 対応の実装ログ
-- `/api/admin/upload` を「ファイル受信API」から「署名URL発行API」へ変更。
-- `lib/supabase-queries.ts` の `uploadImageToStorage()` を、`/api/admin/upload` で取得した `uploadUrl` に対してブラウザから `PUT` する実装に変更。
-- `lib/r2.ts` を `getPresignedUrl()` + `buildR2ObjectKey()` 中心へ整理し、サーバーがファイル本体を受けない設計へ移行。
-- `.env.example` に R2 必須環境変数 (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`) を追記。
-- これにより、Vercel 経由アップロードで発生していた 413 を構造的に回避。
-
-### 2026-04-26 追記: R2 画像アップロード障害の修正 (PR #1〜#4)
-
-署名付きURL方式への移行後、画像が全くアップロードできない（表示されない）問題が発生。以下4つのPRで段階的に修正した。
-
-#### PR #1: 署名不一致の修正
-- **原因**: `PutObjectCommand` に `Metadata: { "Access-Control-Allow-Origin": "*" }` を含めていたため、署名付きURLが `x-amz-meta-access-control-allow-origin` ヘッダーを要求。ブラウザ側のPUTリクエストではこのヘッダーを送信しないため、R2が署名不一致で拒否。
-- **修正**: `Metadata` をPutObjectCommandから削除。CORSはR2バケットレベルの設定で管理する。
-
-#### PR #2: R2_PUBLIC_URL の必須化
-- **原因**: `R2_PUBLIC_URL` 未設定時のデフォルト値が `https://pub-${R2_ACCOUNT_ID}.r2.dev` だったが、R2の公開URLはアカウントIDではなくバケット固有のハッシュを使用する。誤ったURLが生成され、画像はR2にアップロード済みにもかかわらず表示できなかった。
-- **修正**: デフォルト値を削除し、`R2_PUBLIC_URL` を必須環境変数に変更。未設定時はエラーメッセージで正しい設定方法を案内。
-
-#### PR #3: R2_PUBLIC_URL の自動正規化
-- **原因**: Vercelの環境変数に `pub-xxx` のように `https://` や `.r2.dev` を含まない値が設定されていた。結果、画像URLが相対パスとして保存され404エラー。
-- **修正**: `normalizeR2PublicUrl()` 関数を追加。`https://` や `.r2.dev` が欠けていても自動補完する。
-
-#### PR #4: サーバー側アップロードフォールバック
-- **目的**: 署名付きURL（CORS経由）が失敗した場合の安定性向上。
-- **実装**:
-  - `lib/r2.ts` に `uploadToR2()` 関数を追加（サーバー側から直接R2にアップロード）。
-  - `/api/admin/upload-direct` エンドポイントを新設（FormDataでファイル受信→R2に直接アップロード）。
-  - `uploadImageToStorage()` を改修: まず署名付きURLでアップロードを試行し、失敗時はサーバー経由にフォールバック。
-- **注意**: サーバー経由のフォールバックにはVercelの4.5MBペイロード制限が適用される。
-
-#### 環境変数の設定
-- Vercelに `R2_PUBLIC_URL` を設定済み。値は Cloudflare Dashboard > R2 > バケット > Settings > Public access で確認可能。
-- R2バケットのCORS設定は `r2-cors.json` の内容が適用済み。
-
-### 課題: Cloudflare R2 の公開URL制限
-- **現状**: `pub-*.r2.dev` ドメインを使用中だが、レートリミットがあり本番には非推奨。
-- **解決策**: カスタムドメイン（例: `media.rt18-formula1.com`）を Cloudflare 上で設定する。
+- 画像の実体はCloudflare R2に保存する
+- Admin画面から画像をアップロード → R2に保存される
+- そのパブリックURLをDBのimage_urlカラムに文字列として保存
+- フロント側はimage_urlを読んでimgタグで表示する
+- R2の無料枠: 10GB/月
 
 ---
 
-## 次にやること
+## DBテーブル設計 (確定)
 
-1. ~~**署名付きURLの実装完了**~~: 完了済み（PR #1〜#4で修正・フォールバック含め実装完了）。
-2. **問い合わせフォームの疎通**: Contact セクションに実際の送信ロジック（Resend 等）を統合。
-3. **カレンダー機能の強化**: Google Calendar API 連携や iCal 書き出しの最適化。
-4. **SEO/OGP 強化**: SNS シェア時のプレビュー画像の動的生成。
-5. **R2 カスタムドメイン設定**: `pub-*.r2.dev` からカスタムドメインへの移行（レートリミット回避）。
+### メインサイト系
+
+#### news
+```sql
+create table news (
+  id uuid default gen_random_uuid() primary key,
+  title_en text not null,
+  title_ja text,
+  body_en jsonb,
+  body_ja jsonb,
+  image_url text,
+  published_at date not null,
+  created_at timestamp default now()
+);
+```
+bodyはjsonbブロック構造。テキストとPortfolio埋め込みブロックを混在可能
+例: [{"type":"text","content":"..."}, {"type":"portfolio_embed","portfolio_id":"uuid"}]
+
+#### portfolio
+```sql
+create table portfolio (
+  id uuid default gen_random_uuid() primary key,
+  title_en text not null,
+  title_ja text,
+  description_en text,
+  description_ja text,
+  image_url text,
+  sort_order int default 0,
+  created_at timestamp default now()
+);
+```
+
+#### albums
+```sql
+create table albums (
+  id uuid default gen_random_uuid() primary key,
+  name_en text not null,
+  name_ja text,
+  description_en text,
+  description_ja text,
+  cover_image_url text,
+  type text check (type in ('backnumber', 'portfolio')),
+  tags text[],
+  sort_order int default 0,
+  position_x float default 0,
+  position_y float default 0,
+  created_at timestamp default now()
+);
+```
+
+#### album_relations (多対多・無限ネスト)
+```sql
+create table album_relations (
+  parent_id uuid references albums(id) on delete cascade,
+  child_id uuid references albums(id) on delete cascade,
+  sort_order int default 0,
+  primary key (parent_id, child_id)
+);
+```
+
+#### album_news (中間テーブル)
+```sql
+create table album_news (
+  album_id uuid references albums(id) on delete cascade,
+  news_id uuid references news(id) on delete cascade,
+  sort_order int default 0,
+  primary key (album_id, news_id)
+);
+```
+
+#### album_portfolio (中間テーブル)
+```sql
+create table album_portfolio (
+  album_id uuid references albums(id) on delete cascade,
+  portfolio_id uuid references portfolio(id) on delete cascade,
+  sort_order int default 0,
+  primary key (album_id, portfolio_id)
+);
+```
+
+### ショップ系
+
+#### user_profiles (Supabase Authと連携)
+```sql
+create table user_profiles (
+  id uuid references auth.users(id) primary key,
+  display_id text unique,
+  display_name text,
+  last_name text,
+  first_name text,
+  postal_code text,
+  prefecture text,
+  city text,
+  address_line1 text,
+  address_line2 text,
+  agreed_at timestamp,
+  created_at timestamp default now()
+);
+```
+- display_idは未設定の場合「匿名#000000」形式で自動付与
+- display_idはあとから編集可能
+- ログインはメールアドレスまたはdisplay_idどちらでも可能
+- 将来的にSNS・コミュニティ機能に拡張予定
+
+#### products
+```sql
+create table products (
+  id uuid default gen_random_uuid() primary key,
+  name_ja text not null,
+  name_en text,
+  description_ja text,
+  description_en text,
+  type text check (type in ('digital', 'physical', 'skill')),
+  price int not null,
+  stock int,
+  status text check (status in ('on_sale', 'sold_out', 'draft')) default 'draft',
+  image_url text,
+  sort_order int default 0,
+  created_at timestamp default now()
+);
+```
+
+#### digital_contents
+```sql
+create table digital_contents (
+  id uuid default gen_random_uuid() primary key,
+  product_id uuid references products(id) on delete cascade,
+  delivery_type text check (delivery_type in ('file', 'activate_code', 'link', 'text')),
+  content text,
+  created_at timestamp default now()
+);
+```
+delivery_type: file=ファイル配布, activate_code=コード配布, link=リンク配布, text=テキスト配布
+アクティベートコードは他プラットフォーム(Steam等)のコードも対応
+
+#### activate_codes
+```sql
+create table activate_codes (
+  id uuid default gen_random_uuid() primary key,
+  product_id uuid references products(id) on delete cascade,
+  code text not null,
+  is_used boolean default false,
+  used_by uuid,
+  used_at timestamp,
+  created_at timestamp default now()
+);
+```
+
+#### orders
+```sql
+create table orders (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references user_profiles(id),
+  status text check (status in (
+    'pending', 'awaiting_payment', 'paid',
+    'processing', 'shipped', 'delivered', 'cancelled'
+  )) default 'pending',
+  total_price int not null,
+  stripe_payment_intent_id text,
+  shipping_name text,
+  shipping_postal_code text,
+  shipping_prefecture text,
+  shipping_city text,
+  shipping_address_line1 text,
+  shipping_address_line2 text,
+  created_at timestamp default now()
+);
+```
+
+#### order_items
+```sql
+create table order_items (
+  id uuid default gen_random_uuid() primary key,
+  order_id uuid references orders(id) on delete cascade,
+  product_id uuid references products(id),
+  quantity int default 1,
+  price int not null,
+  created_at timestamp default now()
+);
+```
+
+#### commissions (イラスト制作依頼)
+```sql
+create table commissions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references user_profiles(id),
+  status text check (status in (
+    'requested', 'reviewing', 'quoted',
+    'approved', 'agreement_sent', 'agreed',
+    'in_progress', 'checking', 'completed', 'cancelled'
+  )) default 'requested',
+  detail text not null,
+  budget int,
+  quoted_price int,
+  stripe_payment_intent_id text,
+  created_at timestamp default now()
+);
+```
+フロー: 依頼→確認→見積もり→承認→同意書送付→同意確認→制作→確認→決済→納品
+
+#### inquiries (問い合わせ)
+```sql
+create table inquiries (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references user_profiles(id),
+  subject text not null,
+  body text not null,
+  status text check (status in ('open', 'replied', 'closed')) default 'open',
+  created_at timestamp default now()
+);
+```
+
+---
+
+## ページ構造
+
+### メインサイト
+```
+/ (トップ)
+/news
+/news/[id]
+/backnumber
+/backnumber/[album_id]
+/portfolio
+/portfolio/[id]
+/albums/[album_id]
+/calendar
+/profile
+/request
+/contact
+/admin
+```
+
+### ショップ (/shop以下)
+```
+/shop (商品一覧)
+/shop/[id] (商品詳細)
+/shop/cart (カート)
+/shop/checkout (決済)
+/shop/commission (イラスト依頼)
+/shop/inquiry (問い合わせ)
+/shop/auth/login (ログイン)
+/shop/auth/register (会員登録)
+/shop/mypage (マイページ)
+/shop/mypage/orders (購入履歴)
+/shop/mypage/profile (プロフィール設定)
+```
+
+---
+
+## Admin画面構成
+
+```
+/admin
+├── タブ1: メインサイト管理 (既存)
+│   ├── News管理
+│   ├── Portfolio管理
+│   └── Album Relations Editor (React Flow)
+└── タブ2: Shop管理
+    ├── 商品管理 (デジタル・実物・スキル)
+    ├── 注文管理
+    ├── アクティベートコード管理
+    ├── イラスト依頼管理
+    └── 発送管理
+```
+
+---
+
+## アルバム設計の思想
+
+- albumsテーブルはタグ・カテゴリ・レコメンドエンジンを兼ねる
+- 同じ親を持つ兄弟アルバムをサジェスト表示する
+- パンくずは直前に辿ってきたパスを表示
+- BacknumberとPortfolioには壁を設ける (同列混在NG)
+- ただし記事の中にPortfolio作品を埋め込むのはOK (jsonbブロック)
+- albumの親子は多対多・無限ネスト可能
+- 循環参照対策はアプリ側で対応
+
+---
+
+## 会員登録仕様
+
+- メール認証必須 (Supabase Auth)
+- ログイン: メールアドレスまたはdisplay_idどちらでも可能
+- display_id: 未設定の場合「匿名#000000」形式で自動付与・あとから編集可能
+- 住所入力: 郵便番号からzipcloudで自動補完 (都道府県・市区町村)
+- 個人情報取り扱い同意書への同意必須
+- 住所は全購入時に必須
+
+---
+
+## 将来フェーズ
+
+- コミュニティ機能: display_idを使ったSNS的な機能
+- ショップ拡張: 発送委託サービス連携
+- カスタムドメイン: R2をpub-*.r2.devからカスタムドメインへ移行
+
+---
+
+## 進捗
+
+### 完了済み
+- [x] 基本ページ構成 (News, Portfolio, Calendar, Profile, Contact, Request)
+- [x] 日本語/英語切替
+- [x] Admin管理画面 (骨格)
+- [x] Cloudflare R2画像アップロード (Presigned URL方式)
+- [x] Album Relations Editor (React Flow) UI実装
+- [x] albumsテーブルにposition_x/position_y追加
+- [x] Google Search Console登録
+- [x] SEOスコア 100点達成
+- [x] PageSpeed: モバイル78 / デスクトップ97
+
+### 進行中
+- [ ] Album Relations EditorのonConnect (DB保存) デバッグ中
+
+### 未着手 (優先度高)
+- [ ] ショップ系DBテーブル作成 (Supabase SQL実行)
+- [ ] Supabase Auth 会員登録・ログイン実装
+- [ ] /shop ページ群実装
+- [ ] Stripe決済実装
+- [ ] Resendメール送信実装
+- [ ] Admin Shop管理タブ実装
+
+### 未着手 (優先度低)
+- [ ] R2カスタムドメイン設定
+- [ ] コミュニティ機能

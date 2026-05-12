@@ -56,7 +56,8 @@ export default function AdminPage() {
     portfolio: false,
     news: false,
     albums: false,
-    events: false
+    events: false,
+    shop: false
   });
 
   // Album Modal State
