@@ -3,16 +3,25 @@
 import { useCart } from "./cart-context";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 export function CartClient() {
   const { items, removeItem, updateQuantity, totalPrice, totalCount } = useCart();
   const [lang, setLang] = useState<"ja" | "en">("ja");
   const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
     const stored = localStorage.getItem("language");
     if (stored === "en") setLang("en");
+
+    const checkUser = async () => {
+      if (!supabase) return;
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
+    checkUser();
   }, []);
 
   if (!mounted) return null;
@@ -111,12 +120,21 @@ export function CartClient() {
             </div>
           </div>
 
-          <Link
-            href="/shop/checkout"
-            className="w-full block py-4 bg-black text-white text-center rounded-2xl font-black text-sm hover:bg-gray-900 transition-colors shadow-lg active:scale-[0.98]"
-          >
-            Proceed to Checkout
-          </Link>
+          {user ? (
+            <Link
+              href="/shop/checkout"
+              className="w-full block py-4 bg-black text-white text-center rounded-2xl font-black text-sm hover:bg-gray-900 transition-colors shadow-lg active:scale-[0.98]"
+            >
+              Proceed to Checkout
+            </Link>
+          ) : (
+            <Link
+              href="/shop/auth/login"
+              className="w-full block py-4 bg-blue-600 text-white text-center rounded-2xl font-black text-sm hover:bg-blue-700 transition-colors shadow-lg active:scale-[0.98]"
+            >
+              Login to Purchase
+            </Link>
+          )}
           
           <p className="text-[10px] text-center text-gray-400 uppercase tracking-widest font-bold mt-6">
             Secure Payments via Stripe
