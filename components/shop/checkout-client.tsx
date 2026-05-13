@@ -4,6 +4,7 @@ import { useCart } from "./cart-context";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getMyProfile } from "@/lib/supabase-queries";
+import { supabase } from "@/lib/supabaseClient";
 
 export function CheckoutClient() {
   const { items, totalPrice, totalCount } = useCart();
@@ -23,21 +24,29 @@ export function CheckoutClient() {
 
   useEffect(() => {
     async function init() {
-      const profile = await getMyProfile();
-      if (!profile) {
+      if (!supabase) return;
+      
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
         router.push("/shop/auth/login?next=/shop/checkout");
         return;
       }
-      setUser(profile);
-      setShipping({
-        lastName: profile.last_name || "",
-        firstName: profile.first_name || "",
-        postalCode: profile.postal_code || "",
-        prefecture: profile.prefecture || "",
-        city: profile.city || "",
-        address1: profile.address_line1 || "",
-        address2: profile.address_line2 || "",
-      });
+
+      const profile = await getMyProfile();
+      setUser(authUser);
+      
+      if (profile) {
+        setShipping({
+          lastName: profile.last_name || "",
+          firstName: profile.first_name || "",
+          postalCode: profile.postal_code || "",
+          prefecture: profile.prefecture || "",
+          city: profile.city || "",
+          address1: profile.address_line1 || "",
+          address2: profile.address_line2 || "",
+        });
+      }
       setLoading(false);
     }
     init();
