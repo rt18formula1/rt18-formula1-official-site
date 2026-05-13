@@ -146,12 +146,12 @@ export function ShopClient() {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs font-bold">
-                    {product.type.toUpperCase()}
-                  </div>
-                )}
-                <span className={`absolute top-3 left-3 text-xs font-bold px-2 py-1 rounded-full ${TYPE_COLORS[product.type]}`}>
-                  {product.type}
-                </span>
+                  {(product.type || "item").toUpperCase()}
+                </div>
+              )}
+              <span className={`absolute top-3 left-3 text-xs font-bold px-2 py-1 rounded-full ${product.type ? TYPE_COLORS[product.type] : "bg-gray-100 text-gray-700"}`}>
+                {product.type || "item"}
+              </span>
                 {product.status === "sold_out" && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <span className="text-white font-black text-sm">SOLD OUT</span>
