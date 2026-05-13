@@ -36,30 +36,34 @@ export function ShopClient() {
     const fetchProducts = async () => {
       if (!supabase) {
         console.error("⚠️ Supabase client is null. Check environment variables.");
+        setLoading(false);
         return;
       }
       
-      console.log("🔍 Fetching products with status 'on_sale'...");
-      
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let query: any = supabase
-        .from("products")
-        .select("*")
-        .eq("status", "on_sale")
-        .order("sort_order", { ascending: true });
+      try {
+        console.log("🔍 Fetching products with status 'on_sale'...");
         
-      if (filter !== "all") query = query.eq("type", filter);
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error("❌ Supabase error:", error.message, error.details);
-      } else {
-        console.log("✅ Products fetched:", data);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let query: any = supabase
+          .from("products")
+          .select("*")
+          .eq("status", "on_sale");
+          
+        if (filter !== "all") query = query.eq("type", filter);
+        
+        const { data, error } = await query.order("sort_order", { ascending: true });
+        
+        if (error) {
+          console.error("❌ Supabase error:", error.message, error.details);
+        } else {
+          console.log("✅ Products fetched:", data);
+          if (data) setProducts(data);
+        }
+      } catch (err) {
+        console.error("❌ Unexpected error during fetch:", err);
+      } finally {
+        setLoading(false);
       }
-      
-      if (data) setProducts(data);
-      setLoading(false);
     };
     fetchProducts();
   }, [filter]);
