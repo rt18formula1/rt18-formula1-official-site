@@ -364,17 +364,18 @@ create table inquiries (
 - [x] PageSpeed: モバイル78 / デスクトップ97
 - [x] Album Relations EditorのonConnect (DB保存) デバッグ完了
 - [x] Supabase Auth 会員登録・ログイン・コールバック実装 (@supabase/ssr導入)
-- [x] /shop ページ群の基本実装
+- [x] /shop ページ群の基本実装 (商品一覧, 詳細, カート, チェックアウト, 決済完了)
 - [x] Admin Shop管理セクション実装 (商品・注文・依頼の閲覧と商品作成/削除)
+- [x] Stripe決済実装 (Payment Intent API & Webhook)
+- [x] Resendメール送信実装 (注文確認メール自動送信)
 
 ### 進行中
 - [ ] ショップ系DBテーブル作成 (supabase-shop-tables.sql の実行待ち)
 
 ### 未着手 (優先度高)
-- [ ] Stripe決済実装
-- [ ] Resendメール送信実装
 - [ ] アクティベートコード管理の詳細UI実装
 - [ ] 発送管理UI実装
+- [ ] マイページ (購入履歴, プロフィール編集) の詳細実装
 
 ### 未着手 (優先度低)
 - [ ] R2カスタムドメイン設定

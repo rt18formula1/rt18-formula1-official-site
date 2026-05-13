@@ -470,6 +470,22 @@ export async function getEvents() {
 // Shop & Products
 // ----------------------------------------------------------------------
 
+export async function getMyProfile() {
+  if (!supabase) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data, error } = await supabase.from("user_profiles").select("*").eq("id", user.id).single();
+  if (error) return null;
+  return data;
+}
+
+export async function getProductById(id: string) {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("products").select("*").eq("id", id).single();
+  if (error) return null;
+  return data;
+}
+
 export async function getProducts() {
   if (!supabase) return [];
   const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });

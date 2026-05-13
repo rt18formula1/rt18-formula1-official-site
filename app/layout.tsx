@@ -65,6 +65,8 @@ export const viewport: Viewport = {
   themeColor: "#000000",
 };
 
+import { CartProvider } from "@/components/shop/cart-context";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -85,7 +87,9 @@ export default function RootLayout({
             gtag('config', 'G-7V8FYG7SDB');
           `}
         </Script>
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider>
+          <CartProvider>{children}</CartProvider>
+        </LanguageProvider>
         <Analytics />
         <SpeedInsights />
       </body>

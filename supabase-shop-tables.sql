@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS products (
   status TEXT CHECK (status IN ('on_sale', 'sold_out', 'draft')) DEFAULT 'draft',
   image_url TEXT,
   sort_order INTEGER DEFAULT 0,
+  stripe_product_id TEXT,
+  stripe_price_id TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -70,6 +72,7 @@ CREATE TABLE IF NOT EXISTS orders (
   shipping_city TEXT,
   shipping_address_line1 TEXT,
   shipping_address_line2 TEXT,
+  stripe_checkout_session_id TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 

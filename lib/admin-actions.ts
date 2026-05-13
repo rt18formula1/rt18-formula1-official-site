@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseAdmin } from "./supabaseAdmin";
+import { stripe } from "./stripe";
 import type { DbNews, DbPortfolio, DbAlbum, DbEvent } from "./supabase-queries";
 
 export async function createNewsAction(news: Partial<DbNews>) {
@@ -91,4 +92,37 @@ export async function updateCommissionStatusAction(id: string, status: string) {
   const { data, error } = await supabaseAdmin.from("commissions").update({ status }).eq("id", id).select().single();
   if (error) throw error;
   return data;
+}
+
+// ----------------------------------------------------------------------
+// Stripe Sync
+// ----------------------------------------------------------------------
+
+export async function syncProductToStripeAction(productId: string) {
+  // 1. Get product from DB
+  const { data: product, error } = await supabaseAdmin.from("products").select("*").eq("id", productId).single();
+  if (error || !product) throw new Error("Product not found");
+
+  // 2. Create Product on Stripe following Managed Payments blueprint
+  const stripeProduct = await stripe.products.create({
+    name: product.name_en || product.name_ja,
+    description: product.description_en || product.description_ja,
+    tax_code: "txcd_10103100", // As per blueprint for digital products
+    default_price_data: {
+      unit_amount: product.price,
+      currency: "jpy",
+    },
+  }, {
+    headers: {
+      "stripe-version": "2026-02-25.preview"
+    } as any
+  });
+
+  // 3. Update DB with Stripe ID
+  await supabaseAdmin.from("products").update({
+    stripe_product_id: stripeProduct.id,
+    stripe_price_id: stripeProduct.default_price as string,
+  }).eq("id", productId);
+
+  return stripeProduct;
 }
