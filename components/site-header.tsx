@@ -13,7 +13,8 @@ export function SiteHeader() {
     { href: "/news", label: t("navNews") },
     { href: "/portfolio", label: t("navPortfolio") },
     { href: "/calendar", label: t("navCalendar") },
-    { href: "/f1-database", label: language === 'ja' ? 'F1 DB' : 'F1 DB' },
+    { href: "/f1-database", label: "F1 DB" },
+    { href: "/shop", label: language === "ja" ? "Shop" : "Shop" },
     { href: "/#profile", label: t("navProfile") },
     { href: "/#request", label: t("navRequest") },
     { href: "/#contact", label: t("navContact") },
@@ -54,26 +55,14 @@ export function SiteHeader() {
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Menu"
           >
-            <span
-              className={`block w-6 h-[2px] bg-black transition-all duration-300 ${
-                menuOpen ? "rotate-45 translate-y-[7px]" : ""
-              }`}
-            />
-            <span
-              className={`block w-6 h-[2px] bg-black transition-all duration-300 ${
-                menuOpen ? "opacity-0" : ""
-              }`}
-            />
-            <span
-              className={`block w-6 h-[2px] bg-black transition-all duration-300 ${
-                menuOpen ? "-rotate-45 -translate-y-[7px]" : ""
-              }`}
-            />
+            <span className={`block w-6 h-[2px] bg-black transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-[7px]" : ""}`} />
+            <span className={`block w-6 h-[2px] bg-black transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
+            <span className={`block w-6 h-[2px] bg-black transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-[7px]" : ""}`} />
           </button>
         </div>
       </div>
 
-      {/* Mobile menu overlay */}
+      {/* Mobile menu */}
       {menuOpen && (
         <div className="lg:hidden border-t border-black/10 bg-white">
           <nav className="container mx-auto px-4 py-6 flex flex-col gap-4 text-base">
