@@ -47,7 +47,7 @@ export function CartClient() {
                   <img src={item.image_url} alt={item.name_en} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-gray-300">
-                    {item.type.toUpperCase()}
+                    {(item.type || "item").toUpperCase()}
                   </div>
                 )}
               </div>
