@@ -10,6 +10,9 @@ import {
   getAlbumRelations,
   getEvents,
   uploadImageToStorage,
+  getProducts,
+  getOrders,
+  getCommissions,
   type DbNews,
   type DbPortfolio,
   type DbAlbum,
@@ -26,6 +29,8 @@ import {
   deleteAlbumAction,
   createEventAction,
   deleteEventAction,
+  createProductAction,
+  deleteProductAction,
 } from "@/lib/admin-actions";
 import { createAlbumRelation } from "@/lib/supabase-queries";
 // Edit actions will be used when implementing the edit modal
@@ -49,6 +54,9 @@ export default function AdminPage() {
   const [albums, setAlbums] = useState<DbAlbum[]>([]);
   const [albumRelations, setAlbumRelations] = useState<{ parent_id: string; child_id: string }[]>([]);
   const [events, setEvents] = useState<DbEvent[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [commissions, setCommissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   
   // Collapsible sections state
@@ -61,7 +69,7 @@ export default function AdminPage() {
   });
 
   // Album Modal State
-  const [activeModal, setActiveModal] = useState<"news" | "portfolio" | "album" | "event" | "edit" | null>(null);
+  const [activeModal, setActiveModal] = useState<"news" | "portfolio" | "album" | "event" | "product" | "edit" | null>(null);
   const [albumType, setAlbumType] = useState<"backnumber" | "portfolio">("portfolio");
   // const [editItem, setEditItem] = useState<{ id: string; type: "news" | "portfolio"; title_en: string; title_ja: string; body_en?: string; body_ja?: string } | null>(null);
   const [formData, setFormData] = useState({
@@ -74,10 +82,14 @@ export default function AdminPage() {
     location: "",
     startTime: "",
     endTime: "",
+    // Product fields
+    price: "",
+    type: "digital" as "digital" | "physical" | "skill",
+    status: "draft" as "on_sale" | "sold_out" | "draft",
   });
 
   const resetForm = () => {
-    setFormData({ title: "", content: "", file: null, previewUrl: "", albumId: "", parentId: "", location: "", startTime: "", endTime: "" });
+    setFormData({ title: "", content: "", file: null, previewUrl: "", albumId: "", parentId: "", location: "", startTime: "", endTime: "", price: "", type: "digital", status: "draft" });
   };
 
   const buildAlbumOptions = (type: "backnumber" | "portfolio", parentId: string | null = null, depth = 0): DbAlbum[] => {
@@ -103,18 +115,24 @@ export default function AdminPage() {
   }, []);
 
   const loadData = async () => {
-    const [n, p, allAlbums, relations, e] = await Promise.all([
+    const [n, p, allAlbums, relations, e, prods, allOrders, allCommissions] = await Promise.all([
       getNewsList(),
       getPortfolioList(),
       getAllAlbums(),
       getAlbumRelations(),
       getEvents(),
+      getProducts(),
+      getOrders(),
+      getCommissions(),
     ]);
     setNews(n);
     setPortfolio(p);
     setAlbums(allAlbums);
     setAlbumRelations(relations);
     setEvents(e);
+    setProducts(prods);
+    setOrders(allOrders);
+    setCommissions(allCommissions);
   };
 
   const login = async () => {
@@ -214,6 +232,22 @@ export default function AdminPage() {
           is_all_day: false,
           source: "manual",
         });
+      } else if (activeModal === "product") {
+        let image_url = null;
+        if (formData.file) {
+          image_url = await uploadImageToStorage("portfolio-images", formData.file); // Reusing bucket for now
+        }
+        await createProductAction({
+          name_ja: formData.title,
+          name_en: formData.title,
+          description_ja: formData.content,
+          description_en: formData.content,
+          price: parseInt(formData.price) || 0,
+          type: formData.type,
+          status: formData.status,
+          image_url,
+          sort_order: products.length,
+        });
       }
       await loadData();
       setActiveModal(null);
@@ -248,6 +282,14 @@ export default function AdminPage() {
     if (!confirm("Delete this event?")) return;
     setLoading(true);
     await deleteEventAction(id);
+    await loadData();
+    setLoading(false);
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm("Delete this product?")) return;
+    setLoading(true);
+    await deleteProductAction(id);
     await loadData();
     setLoading(false);
   };
@@ -329,6 +371,15 @@ const handleAlbumCreate = (name: string, type: "backnumber" | "portfolio") => {
               className="px-6 py-2 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition shadow-sm"
             >
               + Post Event
+            </button>
+            <button
+              onClick={() => {
+                resetForm();
+                setActiveModal("product");
+              }}
+              className="px-6 py-2 bg-purple-600 text-white font-bold rounded-full hover:bg-purple-700 transition shadow-sm"
+            >
+              + Post Product
             </button>
             <button onClick={logout} className="text-sm underline">Logout</button>
           </div>
@@ -449,6 +500,124 @@ const handleAlbumCreate = (name: string, type: "backnumber" | "portfolio") => {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* Shop Management Section */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between border-b border-black/10 pb-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => toggleSection("shop")}
+                className="w-6 h-6 flex items-center justify-center text-black hover:bg-black/5 rounded transition-colors"
+              >
+                <span className={`transform transition-transform ${collapsedSections.shop ? "rotate-90" : ""}`}>▶</span>
+              </button>
+              <h2 className="text-xl font-bold">Shop Management</h2>
+            </div>
+          </div>
+          {!collapsedSections.shop && (
+            <div className="space-y-10">
+              {/* Products */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Products ({products.length})</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {products.map((p) => (
+                    <div key={p.id} className="p-4 border border-black/10 rounded-2xl bg-white flex flex-col group">
+                      <div className="aspect-square bg-gray-50 rounded-xl overflow-hidden mb-3">
+                        {p.image_url ? (
+                          <img src={p.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-300 uppercase">{p.type}</div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{p.type}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'on_sale' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                            {p.status}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-sm leading-tight mb-1">{p.name_ja}</h4>
+                        <p className="font-black text-sm">¥{p.price.toLocaleString()}</p>
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        <button onClick={() => handleDeleteProduct(p.id)} className="flex-1 py-2 text-[10px] font-bold text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition">Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Orders */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Recent Orders ({orders.length})</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-black/10">
+                        <th className="py-3 font-bold">ID</th>
+                        <th className="py-3 font-bold">Customer</th>
+                        <th className="py-3 font-bold">Status</th>
+                        <th className="py-3 font-bold">Total</th>
+                        <th className="py-3 font-bold">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((o) => (
+                        <tr key={o.id} className="border-b border-black/5 hover:bg-gray-50">
+                          <td className="py-3 font-mono text-[10px]">{o.id.slice(0, 8)}</td>
+                          <td className="py-3">
+                            <p className="font-bold">{o.user_profiles?.display_name || "Guest"}</p>
+                            <p className="text-[10px] text-gray-400">{o.shipping_name}</p>
+                          </td>
+                          <td className="py-3">
+                            <span className="px-2 py-1 bg-black/5 rounded-full text-[10px] font-bold">{o.status}</span>
+                          </td>
+                          <td className="py-3 font-black">¥{o.total_price.toLocaleString()}</td>
+                          <td className="py-3 text-gray-400 text-[10px]">{new Date(o.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                      {orders.length === 0 && (
+                        <tr><td colSpan={5} className="py-10 text-center text-gray-400">No orders found.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Commissions */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Illustration Requests ({commissions.length})</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {commissions.map((c) => (
+                    <div key={c.id} className="p-5 border border-black/10 rounded-2xl bg-white shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase">{c.status}</span>
+                          <p className="text-xs text-gray-400 mt-2">{new Date(c.created_at).toLocaleString()}</p>
+                        </div>
+                        <p className="font-black">Budget: ¥{c.budget?.toLocaleString() || "N/A"}</p>
+                      </div>
+                      <p className="font-bold text-sm mb-4 line-clamp-3">{c.detail}</p>
+                      <div className="flex items-center gap-3 pt-4 border-t border-black/5">
+                        <div className="w-8 h-8 bg-black/5 rounded-full flex items-center justify-center text-xs font-bold">
+                          {c.user_profiles?.display_name?.[0] || "?" }
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs font-bold">{c.user_profiles?.display_name || "Unknown User"}</p>
+                          <p className="text-[10px] text-gray-400">@{c.user_profiles?.display_id}</p>
+                        </div>
+                        <button className="text-[10px] font-bold underline">Manage</button>
+                      </div>
+                    </div>
+                  ))}
+                  {commissions.length === 0 && (
+                    <p className="text-sm text-gray-400">No illustration requests found.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Events Section */}
@@ -636,6 +805,47 @@ const handleAlbumCreate = (name: string, type: "backnumber" | "portfolio") => {
                           onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                           className="w-full p-3 bg-black/5 rounded-xl text-sm font-bold"
                         />
+                      </div>
+                    </div>
+                  )}
+
+                  {activeModal === "product" && (
+                    <div className="space-y-4 pt-4 border-t border-black/5">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Price (JPY)</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 1500"
+                            value={formData.price}
+                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                            className="w-full p-3 bg-black/5 rounded-xl text-sm font-bold"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Type</label>
+                          <select
+                            value={formData.type}
+                            onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                            className="w-full p-3 bg-black/5 rounded-xl text-sm font-bold appearance-none"
+                          >
+                            <option value="digital">Digital</option>
+                            <option value="physical">Physical</option>
+                            <option value="skill">Skill</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</label>
+                        <select
+                          value={formData.status}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                          className="w-full p-3 bg-black/5 rounded-xl text-sm font-bold appearance-none"
+                        >
+                          <option value="draft">Draft</option>
+                          <option value="on_sale">On Sale</option>
+                          <option value="sold_out">Sold Out</option>
+                        </select>
                       </div>
                     </div>
                   )}

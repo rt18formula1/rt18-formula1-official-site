@@ -466,3 +466,27 @@ export async function getEvents() {
   return data as DbEvent[];
 }
 
+// ----------------------------------------------------------------------
+// Shop & Products
+// ----------------------------------------------------------------------
+
+export async function getProducts() {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
+  if (error) return [];
+  return data;
+}
+
+export async function getOrders() {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("orders").select("*, user_profiles(*)").order("created_at", { ascending: false });
+  if (error) return [];
+  return data;
+}
+
+export async function getCommissions() {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("commissions").select("*, user_profiles(*)").order("created_at", { ascending: false });
+  if (error) return [];
+  return data;
+}

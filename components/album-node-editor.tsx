@@ -66,20 +66,55 @@ function Flow() {
   const onConnect = useCallback(async (params: Connection) => {
     console.log("onConnect fired:", params);
     if (!supabase || !params.source || !params.target) return;
+    
+    // Prevent self-loops
+    if (params.source === params.target) {
+      console.warn("Self-loops are not allowed");
+      return;
+    }
+
+    // Check if edge already exists in UI
+    const exists = edges.some(e => e.source === params.source && e.target === params.target);
+    if (exists) {
+      console.log("Edge already exists");
+      return;
+    }
+
     const newEdge = {
       ...params,
       id: `${params.source}__${params.target}`,
       markerEnd: { type: MarkerType.ArrowClosed },
     };
+
+    // Optimistically add edge to UI
     setEdges((eds: any[]) => addEdge(newEdge, eds) as any[]);
-    const { error } = await supabase.from("album_relations").insert({
-      parent_id: params.source,
-      child_id: params.target,
-      sort_order: 0,
-    });
-    if (error) console.error("Insert failed:", error);
-    else console.log("Insert success!");
-  }, [setEdges]);
+
+    try {
+      const { error } = await supabase.from("album_relations").insert({
+        parent_id: params.source,
+        child_id: params.target,
+        sort_order: 0,
+      });
+
+      if (error) {
+        // If it's a unique constraint violation, it means it already exists in DB but not in UI state
+        // We can just leave it as is if it's already in UI, or log it.
+        if (error.code === "23505") {
+          console.log("Relation already exists in database");
+        } else {
+          console.error("Insert failed:", error);
+          // Rollback UI if insert failed (and not because of duplicate)
+          setEdges((eds: any[]) => eds.filter(e => e.id !== newEdge.id));
+          alert(`Failed to save relation: ${error.message}`);
+        }
+      } else {
+        console.log("Insert success!");
+      }
+    } catch (err) {
+      console.error("Unexpected error during insert:", err);
+      setEdges((eds: any[]) => eds.filter(e => e.id !== newEdge.id));
+    }
+  }, [setEdges, edges]);
 
   const handleEdgesChange = useCallback((changes: EdgeChange[]) => {
     const filtered = changes.filter((c: any) => c.type !== "add");

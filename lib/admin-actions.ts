@@ -61,3 +61,34 @@ export async function deleteEventAction(id: string) {
   if (error) throw error;
   return { success: true };
 }
+// ----------------------------------------------------------------------
+// Shop & Products
+// ----------------------------------------------------------------------
+
+export async function createProductAction(product: any) {
+  const { data, error } = await supabaseAdmin.from("products").insert(product).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProductAction(id: string, product: any) {
+  const { data, error } = await supabaseAdmin.from("products").update(product).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteProductAction(id: string) {
+  const { error } = await supabaseAdmin.from("products").delete().eq("id", id);
+  if (error) throw error;
+  return { success: true };
+}
+
+// ----------------------------------------------------------------------
+// Commissions
+// ----------------------------------------------------------------------
+
+export async function updateCommissionStatusAction(id: string, status: string) {
+  const { data, error } = await supabaseAdmin.from("commissions").update({ status }).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}

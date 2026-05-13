@@ -362,17 +362,19 @@ create table inquiries (
 - [x] Google Search Console登録
 - [x] SEOスコア 100点達成
 - [x] PageSpeed: モバイル78 / デスクトップ97
+- [x] Album Relations EditorのonConnect (DB保存) デバッグ完了
+- [x] Supabase Auth 会員登録・ログイン・コールバック実装 (@supabase/ssr導入)
+- [x] /shop ページ群の基本実装
+- [x] Admin Shop管理セクション実装 (商品・注文・依頼の閲覧と商品作成/削除)
 
 ### 進行中
-- [ ] Album Relations EditorのonConnect (DB保存) デバッグ中
+- [ ] ショップ系DBテーブル作成 (supabase-shop-tables.sql の実行待ち)
 
 ### 未着手 (優先度高)
-- [ ] ショップ系DBテーブル作成 (Supabase SQL実行)
-- [ ] Supabase Auth 会員登録・ログイン実装
-- [ ] /shop ページ群実装
 - [ ] Stripe決済実装
 - [ ] Resendメール送信実装
-- [ ] Admin Shop管理タブ実装
+- [ ] アクティベートコード管理の詳細UI実装
+- [ ] 発送管理UI実装
 
 ### 未着手 (優先度低)
 - [ ] R2カスタムドメイン設定
