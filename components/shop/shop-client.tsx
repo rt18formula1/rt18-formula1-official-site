@@ -34,16 +34,31 @@ export function ShopClient() {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      if (!supabase) return;
+      if (!supabase) {
+        console.error("⚠️ Supabase client is null. Check environment variables.");
+        return;
+      }
+      
+      console.log("🔍 Fetching products with status 'on_sale'...");
+      
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query: any = supabase
         .from("products")
         .select("*")
         .eq("status", "on_sale")
         .order("sort_order", { ascending: true });
+        
       if (filter !== "all") query = query.eq("type", filter);
+      
       const { data, error } = await query;
-      if (!error && data) setProducts(data);
+      
+      if (error) {
+        console.error("❌ Supabase error:", error.message, error.details);
+      } else {
+        console.log("✅ Products fetched:", data);
+      }
+      
+      if (data) setProducts(data);
       setLoading(false);
     };
     fetchProducts();
