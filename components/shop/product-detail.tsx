@@ -65,7 +65,7 @@ export function ProductDetail({ product }: { product: Product }) {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-300 font-black text-4xl">
-                {product.type.toUpperCase()}
+                {(product.type || "item").toUpperCase()}
               </div>
             )}
           </div>
@@ -75,7 +75,7 @@ export function ProductDetail({ product }: { product: Product }) {
         <div className="w-full md:w-[400px] flex flex-col">
           <div className="mb-6">
             <span className="inline-block px-3 py-1 bg-black/5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">
-              {TYPE_LABELS[product.type]}
+              {TYPE_LABELS[product.type || "digital"]}
             </span>
             <h1 className="text-3xl font-black tracking-tighter leading-tight mb-2">
               {name}
