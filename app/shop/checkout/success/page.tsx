@@ -21,7 +21,7 @@ export default function SuccessPage() {
       </p>
       <div className="flex flex-col sm:flex-row justify-center gap-4">
         <Link
-          href="/shop/mypage/orders"
+          href="/shop/mypage"
           className="px-8 py-4 bg-black text-white rounded-2xl font-black text-sm hover:bg-gray-900 transition-colors shadow-lg"
         >
           View My Orders
