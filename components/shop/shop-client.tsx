@@ -26,44 +26,25 @@ export function ShopClient() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [lang, setLang] = useState<"ja" | "en">("ja");
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("language");
     if (stored === "en") setLang("en");
+    if (supabase) {
+      supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    }
   }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
-      if (!supabase) {
-        console.error("⚠️ Supabase client is null. Check environment variables.");
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        console.log("🔍 Fetching products with status 'on_sale'...");
-        
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let query: any = supabase
-          .from("products")
-          .select("*")
-          .eq("status", "on_sale");
-          
-        if (filter !== "all") query = query.eq("type", filter);
-        
-        const { data, error } = await query.order("sort_order", { ascending: true });
-        
-        if (error) {
-          console.error("❌ Supabase error:", error.message, error.details);
-        } else {
-          console.log("✅ Products fetched:", data);
-          if (data) setProducts(data);
-        }
-      } catch (err) {
-        console.error("❌ Unexpected error during fetch:", err);
-      } finally {
-        setLoading(false);
-      }
+      if (!supabase) { setLoading(false); return; }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query: any = supabase.from("products").select("*").eq("status", "on_sale");
+      if (filter !== "all") query = query.eq("type", filter);
+      const { data, error } = await query.order("sort_order", { ascending: true });
+      if (!error && data) setProducts(data);
+      setLoading(false);
     };
     fetchProducts();
   }, [filter]);
@@ -77,47 +58,63 @@ export function ShopClient() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
-      <div className="mb-12">
-        <h1 className="text-4xl font-black tracking-tighter mb-2">Shop</h1>
-        <p className="text-gray-500 text-sm">
-          Digital contents, goods, and illustration commissions
-        </p>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-12">
+        <div>
+          <h1 className="text-4xl font-black tracking-tighter mb-2">Shop</h1>
+          <p className="text-gray-500 text-sm">Digital contents, goods, and illustration commissions</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {user ? (
+            <Link href="/shop/mypage"
+              className="flex items-center gap-2 px-4 py-2 border border-black/20 rounded-xl text-sm font-bold hover:border-black hover:bg-black hover:text-white transition-all">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              My Page
+            </Link>
+          ) : (
+            <Link href="/shop/auth/login"
+              className="px-4 py-2 border border-black/20 rounded-xl text-sm font-bold hover:border-black transition-all">
+              Login
+            </Link>
+          )}
+          <Link href="/shop/cart"
+            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-900 transition-all">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Cart
+          </Link>
+        </div>
       </div>
 
-      <Link
-        href="/shop/commission"
-        className="block mb-10 bg-black text-white rounded-2xl p-8 hover:bg-gray-900 transition-colors"
-      >
+      {/* Commission Banner */}
+      <Link href="/shop/commission"
+        className="block mb-10 bg-black text-white rounded-2xl p-8 hover:bg-gray-900 transition-colors">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
-              Illustration Commission
-            </p>
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Illustration Commission</p>
             <h2 className="text-2xl font-black">Order Original Illustration</h2>
-            <p className="text-gray-400 text-sm mt-2">
-              Custom F1 driver, car, and team illustrations made to order
-            </p>
+            <p className="text-gray-400 text-sm mt-2">Custom F1 driver, car, and team illustrations made to order</p>
           </div>
           <span className="text-4xl">&#8594;</span>
         </div>
       </Link>
 
+      {/* Filters */}
       <div className="flex gap-3 mb-8 flex-wrap">
         {filters.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
+          <button key={f.value} onClick={() => setFilter(f.value)}
             className={`px-5 py-2 rounded-full text-sm font-bold border transition-all ${
-              filter === f.value
-                ? "bg-black text-white border-black"
-                : "bg-white text-black border-black/20 hover:border-black"
-            }`}
-          >
+              filter === f.value ? "bg-black text-white border-black" : "bg-white text-black border-black/20 hover:border-black"
+            }`}>
             {f.label}
           </button>
         ))}
       </div>
 
+      {/* Products */}
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {[...Array(8)].map((_, i) => (
@@ -139,19 +136,16 @@ export function ShopClient() {
             <Link key={product.id} href={`/shop/${product.id}`} className="group">
               <div className="relative aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-3">
                 {product.image_url ? (
-                  <img
-                    src={product.image_url}
-                    alt={lang === "ja" ? product.name_ja : product.name_en}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  <img src={product.image_url} alt={lang === "ja" ? product.name_ja : product.name_en}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs font-bold">
-                  {(product.type || "item").toUpperCase()}
-                </div>
-              )}
-              <span className={`absolute top-3 left-3 text-xs font-bold px-2 py-1 rounded-full ${product.type ? TYPE_COLORS[product.type] : "bg-gray-100 text-gray-700"}`}>
-                {product.type || "item"}
-              </span>
+                    {(product.type || "item").toUpperCase()}
+                  </div>
+                )}
+                <span className={`absolute top-3 left-3 text-xs font-bold px-2 py-1 rounded-full ${TYPE_COLORS[product.type] || "bg-gray-100 text-gray-700"}`}>
+                  {product.type}
+                </span>
                 {product.status === "sold_out" && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <span className="text-white font-black text-sm">SOLD OUT</span>
@@ -161,22 +155,16 @@ export function ShopClient() {
               <h3 className="font-bold text-sm leading-tight mb-1 group-hover:underline">
                 {lang === "ja" ? product.name_ja : product.name_en}
               </h3>
-              <p className="font-black text-sm">
-                {String.fromCharCode(165)}{product.price.toLocaleString()}
-              </p>
+              <p className="font-black text-sm">{String.fromCharCode(165)}{product.price.toLocaleString()}</p>
             </Link>
           ))}
         </div>
       )}
 
       <div className="mt-16 pt-8 border-t border-black/10 text-center">
-        <p className="text-sm text-gray-500 mb-3">
-          Feel free to contact us with any questions
-        </p>
-        <Link
-          href="/shop/inquiry"
-          className="inline-block px-6 py-3 border border-black rounded-full text-sm font-bold hover:bg-black hover:text-white transition-colors"
-        >
+        <p className="text-sm text-gray-500 mb-3">Feel free to contact us with any questions</p>
+        <Link href="/shop/inquiry"
+          className="inline-block px-6 py-3 border border-black rounded-full text-sm font-bold hover:bg-black hover:text-white transition-colors">
           Contact
         </Link>
       </div>

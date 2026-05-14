@@ -32,6 +32,18 @@ export default function MyPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"orders" | "commissions" | "profile">("orders");
 
+  // Edit state
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editForm, setEditForm] = useState({
+    display_id: "", display_name: "",
+    last_name: "", first_name: "",
+    postal_code: "", prefecture: "", city: "",
+    address_line1: "", address_line2: "",
+  });
+  const [postalLoading, setPostalLoading] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       if (!supabase) { router.push("/shop/auth/login"); return; }
@@ -43,13 +55,68 @@ export default function MyPage() {
         supabase.from("orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("commissions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       ]);
-      if (prof) setProfile(prof);
+      if (prof) {
+        setProfile(prof);
+        setEditForm({
+          display_id: prof.display_id || "",
+          display_name: prof.display_name || "",
+          last_name: prof.last_name || "",
+          first_name: prof.first_name || "",
+          postal_code: prof.postal_code || "",
+          prefecture: prof.prefecture || "",
+          city: prof.city || "",
+          address_line1: prof.address_line1 || "",
+          address_line2: prof.address_line2 || "",
+        });
+      }
       if (ords) setOrders(ords);
       if (comms) setCommissions(comms);
       setLoading(false);
     };
     load();
   }, [router]);
+
+  const fetchAddress = async () => {
+    if (editForm.postal_code.length < 7) return;
+    setPostalLoading(true);
+    try {
+      const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${editForm.postal_code}`);
+      const data = await res.json();
+      if (data.results?.[0]) {
+        setEditForm(f => ({ ...f, prefecture: data.results[0].address1, city: data.results[0].address2 + data.results[0].address3 }));
+      }
+    } catch {}
+    setPostalLoading(false);
+  };
+
+  const handleSave = async () => {
+    if (!supabase || !user) return;
+    setSaving(true);
+    setEditError("");
+
+    // Check display_id uniqueness if changed
+    if (editForm.display_id && editForm.display_id !== profile?.display_id) {
+      const { data: existing } = await supabase.from("user_profiles").select("id").eq("display_id", editForm.display_id).neq("id", user.id).single();
+      if (existing) { setEditError("This User ID is already taken."); setSaving(false); return; }
+    }
+
+    const { error } = await supabase.from("user_profiles").update({
+      display_id: editForm.display_id || null,
+      display_name: editForm.display_name || null,
+      last_name: editForm.last_name,
+      first_name: editForm.first_name,
+      postal_code: editForm.postal_code,
+      prefecture: editForm.prefecture,
+      city: editForm.city,
+      address_line1: editForm.address_line1,
+      address_line2: editForm.address_line2 || null,
+    }).eq("id", user.id);
+
+    if (error) { setEditError(error.message); setSaving(false); return; }
+    setProfile({ ...profile, ...editForm });
+    setEditing(false);
+    setSaving(false);
+  };
 
   const handleSignOut = async () => {
     if (!supabase) return;
@@ -153,31 +220,127 @@ export default function MyPage() {
 
       {tab === "profile" && (
         <div className="space-y-4">
-          <div className="border border-black/10 rounded-2xl p-6 space-y-4">
-            <h2 className="font-black text-xs uppercase tracking-widest text-gray-400">Account</h2>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><p className="text-gray-400 text-xs mb-1">User ID</p><p className="font-bold">@{profile?.display_id || "not set"}</p></div>
-              <div><p className="text-gray-400 text-xs mb-1">Email</p><p className="font-bold">{user?.email}</p></div>
-              {(profile?.last_name || profile?.first_name) && (
-                <div><p className="text-gray-400 text-xs mb-1">Name</p><p className="font-bold">{profile?.last_name} {profile?.first_name}</p></div>
-              )}
-            </div>
-          </div>
-          {profile?.address_line1 && (
-            <div className="border border-black/10 rounded-2xl p-6 space-y-3">
-              <h2 className="font-black text-xs uppercase tracking-widest text-gray-400">Shipping Address</h2>
-              <div className="text-sm text-gray-600 space-y-0.5">
-                {profile?.postal_code && <p>{profile.postal_code}</p>}
-                <p>{profile?.prefecture} {profile?.city}</p>
-                <p>{profile?.address_line1}</p>
-                {profile?.address_line2 && <p>{profile.address_line2}</p>}
+          {!editing ? (
+            <>
+              <div className="border border-black/10 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-black text-xs uppercase tracking-widest text-gray-400">Account</h2>
+                  <button onClick={() => setEditing(true)}
+                    className="text-xs font-bold px-3 py-1.5 border border-black/20 rounded-lg hover:border-black hover:bg-black hover:text-white transition-all">
+                    Edit Profile
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><p className="text-gray-400 text-xs mb-1">User ID</p><p className="font-bold">@{profile?.display_id || "not set"}</p></div>
+                  <div><p className="text-gray-400 text-xs mb-1">Display Name</p><p className="font-bold">{profile?.display_name || "not set"}</p></div>
+                  <div><p className="text-gray-400 text-xs mb-1">Email</p><p className="font-bold">{user?.email}</p></div>
+                  {(profile?.last_name || profile?.first_name) && (
+                    <div><p className="text-gray-400 text-xs mb-1">Name</p><p className="font-bold">{profile?.last_name} {profile?.first_name}</p></div>
+                  )}
+                </div>
               </div>
+              {profile?.address_line1 && (
+                <div className="border border-black/10 rounded-2xl p-6 space-y-3">
+                  <h2 className="font-black text-xs uppercase tracking-widest text-gray-400">Shipping Address</h2>
+                  <div className="text-sm text-gray-600 space-y-0.5">
+                    {profile?.postal_code && <p>{profile.postal_code}</p>}
+                    <p>{profile?.prefecture} {profile?.city}</p>
+                    <p>{profile?.address_line1}</p>
+                    {profile?.address_line2 && <p>{profile.address_line2}</p>}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="border border-black rounded-2xl p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h2 className="font-black text-sm">Edit Profile</h2>
+                <button onClick={() => { setEditing(false); setEditError(""); }}
+                  className="text-xs text-gray-400 hover:text-black">Cancel</button>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-black text-xs uppercase tracking-widest text-gray-400">Account Info</h3>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">User ID</label>
+                  <div className="flex items-center border border-black/20 rounded-xl overflow-hidden focus-within:border-black">
+                    <span className="px-3 text-gray-400 text-sm">@</span>
+                    <input type="text" value={editForm.display_id}
+                      onChange={(e) => setEditForm(f => ({ ...f, display_id: e.target.value.replace(/[^a-zA-Z0-9_]/g, "") }))}
+                      className="flex-1 px-2 py-3 text-sm focus:outline-none" placeholder="rt18fan" />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Letters, numbers, and underscores only.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">Display Name</label>
+                  <input type="text" value={editForm.display_name}
+                    onChange={(e) => setEditForm(f => ({ ...f, display_name: e.target.value }))}
+                    className="w-full border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black" placeholder="rt18 F1 Fan" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5">Last Name</label>
+                    <input type="text" value={editForm.last_name}
+                      onChange={(e) => setEditForm(f => ({ ...f, last_name: e.target.value }))}
+                      className="w-full border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5">First Name</label>
+                    <input type="text" value={editForm.first_name}
+                      onChange={(e) => setEditForm(f => ({ ...f, first_name: e.target.value }))}
+                      className="w-full border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2 border-t border-black/10">
+                <h3 className="font-black text-xs uppercase tracking-widest text-gray-400 pt-2">Shipping Address</h3>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">Postal Code</label>
+                  <div className="flex gap-2">
+                    <input type="text" value={editForm.postal_code}
+                      onChange={(e) => setEditForm(f => ({ ...f, postal_code: e.target.value.replace(/[^0-9]/g, "").slice(0, 7) }))}
+                      className="flex-1 border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black" placeholder="1234567" maxLength={7} />
+                    <button onClick={fetchAddress} disabled={editForm.postal_code.length < 7 || postalLoading}
+                      className="px-4 py-3 bg-black text-white rounded-xl text-xs font-bold hover:bg-gray-900 transition-colors disabled:opacity-50">
+                      {postalLoading ? "..." : "Search"}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">Prefecture</label>
+                  <input type="text" value={editForm.prefecture}
+                    onChange={(e) => setEditForm(f => ({ ...f, prefecture: e.target.value }))}
+                    className="w-full border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">City</label>
+                  <input type="text" value={editForm.city}
+                    onChange={(e) => setEditForm(f => ({ ...f, city: e.target.value }))}
+                    className="w-full border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">Address Line 1</label>
+                  <input type="text" value={editForm.address_line1}
+                    onChange={(e) => setEditForm(f => ({ ...f, address_line1: e.target.value }))}
+                    className="w-full border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">Address Line 2 (optional)</label>
+                  <input type="text" value={editForm.address_line2}
+                    onChange={(e) => setEditForm(f => ({ ...f, address_line2: e.target.value }))}
+                    className="w-full border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black" />
+                </div>
+              </div>
+
+              {editError && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">{editError}</div>}
+
+              <button onClick={handleSave} disabled={saving}
+                className="w-full bg-black text-white rounded-xl py-3 font-bold hover:bg-gray-900 transition-colors disabled:opacity-50">
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
             </div>
           )}
-          <p className="text-xs text-gray-400 text-center pt-2">
-            To update your profile, contact us via the{" "}
-            <Link href="/shop/inquiry" className="underline hover:text-black">inquiry form</Link>.
-          </p>
         </div>
       )}
     </div>
