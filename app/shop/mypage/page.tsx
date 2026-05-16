@@ -52,7 +52,7 @@ export default function MyPage() {
       setUser(user);
       const [{ data: prof }, { data: ords }, { data: comms }] = await Promise.all([
         supabase.from("user_profiles").select("*").eq("id", user.id).single(),
-        supabase.from("orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("orders").select("*, order_items(*, products(name_ja, name_en, type, image_url))").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("commissions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       ]);
       if (prof) {
