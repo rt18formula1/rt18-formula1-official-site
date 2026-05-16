@@ -43,6 +43,7 @@ import { createAlbumRelation } from "@/lib/supabase-queries";
 
 import { AdminImageCard } from "@/components/admin-image-card";
 import { AlbumNodeEditor } from "@/components/album-node-editor";
+import { ShopAdminTab } from "@/components/shop/shop-admin-tab";
 
 export default function AdminPage() {
   const [sessionOk, setSessionOk] = useState(false);
@@ -506,120 +507,14 @@ const handleAlbumCreate = (name: string, type: "backnumber" | "portfolio") => {
         <section className="space-y-6">
           <div className="flex items-center justify-between border-b border-black/10 pb-4">
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => toggleSection("shop")}
-                className="w-6 h-6 flex items-center justify-center text-black hover:bg-black/5 rounded transition-colors"
-              >
-                <span className={`transform transition-transform ${collapsedSections.shop ? "rotate-90" : ""}`}>▶</span>
+              <button onClick={() => toggleSection("shop")} className="w-6 h-6 flex items-center justify-center text-black hover:bg-black/5 rounded transition-colors">
+                <span className={`transform transition-transform ${collapsedSections.shop ? "rotate-90" : ""}`}>Shop</span>
               </button>
               <h2 className="text-xl font-bold">Shop Management</h2>
             </div>
           </div>
-          {!collapsedSections.shop && (
-            <div className="space-y-10">
-              {/* Products */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Products ({products.length})</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {products.map((p) => (
-                    <div key={p.id} className="p-4 border border-black/10 rounded-2xl bg-white flex flex-col group">
-                      <div className="aspect-square bg-gray-50 rounded-xl overflow-hidden mb-3">
-                        {p.image_url ? (
-                          <img src={p.image_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-300 uppercase">{p.type}</div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{p.type}</span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'on_sale' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                            {p.status}
-                          </span>
-                        </div>
-                        <h4 className="font-bold text-sm leading-tight mb-1">{p.name_ja}</h4>
-                        <p className="font-black text-sm">¥{p.price.toLocaleString()}</p>
-                      </div>
-                      <div className="mt-4 flex gap-2">
-                        <button onClick={() => handleDeleteProduct(p.id)} className="flex-1 py-2 text-[10px] font-bold text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition">Delete</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Orders */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Recent Orders ({orders.length})</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-black/10">
-                        <th className="py-3 font-bold">ID</th>
-                        <th className="py-3 font-bold">Customer</th>
-                        <th className="py-3 font-bold">Status</th>
-                        <th className="py-3 font-bold">Total</th>
-                        <th className="py-3 font-bold">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((o) => (
-                        <tr key={o.id} className="border-b border-black/5 hover:bg-gray-50">
-                          <td className="py-3 font-mono text-[10px]">{o.id.slice(0, 8)}</td>
-                          <td className="py-3">
-                            <p className="font-bold">{o.user_profiles?.display_name || "Guest"}</p>
-                            <p className="text-[10px] text-gray-400">{o.shipping_name}</p>
-                          </td>
-                          <td className="py-3">
-                            <span className="px-2 py-1 bg-black/5 rounded-full text-[10px] font-bold">{o.status}</span>
-                          </td>
-                          <td className="py-3 font-black">¥{o.total_price.toLocaleString()}</td>
-                          <td className="py-3 text-gray-400 text-[10px]">{new Date(o.created_at).toLocaleDateString()}</td>
-                        </tr>
-                      ))}
-                      {orders.length === 0 && (
-                        <tr><td colSpan={5} className="py-10 text-center text-gray-400">No orders found.</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Commissions */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-black uppercase tracking-wider text-gray-400">Illustration Requests ({commissions.length})</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {commissions.map((c) => (
-                    <div key={c.id} className="p-5 border border-black/10 rounded-2xl bg-white shadow-sm">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase">{c.status}</span>
-                          <p className="text-xs text-gray-400 mt-2">{new Date(c.created_at).toLocaleString()}</p>
-                        </div>
-                        <p className="font-black">Budget: ¥{c.budget?.toLocaleString() || "N/A"}</p>
-                      </div>
-                      <p className="font-bold text-sm mb-4 line-clamp-3">{c.detail}</p>
-                      <div className="flex items-center gap-3 pt-4 border-t border-black/5">
-                        <div className="w-8 h-8 bg-black/5 rounded-full flex items-center justify-center text-xs font-bold">
-                          {c.user_profiles?.display_name?.[0] || "?" }
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-xs font-bold">{c.user_profiles?.display_name || "Unknown User"}</p>
-                          <p className="text-[10px] text-gray-400">@{c.user_profiles?.display_id}</p>
-                        </div>
-                        <button className="text-[10px] font-bold underline">Manage</button>
-                      </div>
-                    </div>
-                  ))}
-                  {commissions.length === 0 && (
-                    <p className="text-sm text-gray-400">No illustration requests found.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          {!collapsedSections.shop && <ShopAdminTab />}
         </section>
-
         {/* Events Section */}
         <section className="space-y-6">
           <div className="border-b border-black/10 pb-4">
