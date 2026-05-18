@@ -51,6 +51,12 @@ export async function POST(request: Request) {
       total_price: session.amount_total,
       stripe_payment_intent_id: session.payment_intent || null,
       stripe_checkout_session_id: session.id,
+      shipping_name: session.metadata?.shipping_name || null,
+      shipping_postal_code: session.metadata?.shipping_postal_code || null,
+      shipping_prefecture: session.metadata?.shipping_prefecture || null,
+      shipping_city: session.metadata?.shipping_city || null,
+      shipping_address_line1: session.metadata?.shipping_address_line1 || null,
+      shipping_address_line2: session.metadata?.shipping_address_line2 || null,
     };
     console.log("Inserting order:", JSON.stringify(insertData));
 

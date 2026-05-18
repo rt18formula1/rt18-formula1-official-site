@@ -204,7 +204,8 @@ export function ShopAdminTab() {
       {tab==="orders" && (
         <div className="space-y-3">
           {orders.length===0 ? <p className="text-center py-8 text-gray-400 text-sm">No orders yet</p> :
-            orders.map(o=>(
+            orders.map(o=><OrderCard key={o.id} order={o} onStatusChange={updateOrderStatus}/>)}
+            {false && orders.map(o=>(
               <div key={o.id} className="border border-black/10 rounded-xl p-5 space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
@@ -285,6 +286,89 @@ function CommissionCard({c,onStatus}:{c:any;onStatus:(id:string,status:string)=>
             className="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-bold hover:bg-gray-900 disabled:opacity-50">
             {saving?"...":"Save"}
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function OrderCard({order: o, onStatusChange}: {order: any; onStatusChange: (id: string, status: string) => void}) {
+  const [expanded, setExpanded] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState(o.tracking_number || '');
+  const [saving, setSaving] = useState(false);
+
+  const ORDER_STATUSES = ["pending","awaiting_payment","paid","processing","shipped","delivered","cancelled"];
+  const STATUS_COLORS: Record<string, string> = {
+    pending:"bg-yellow-100 text-yellow-700",paid:"bg-green-100 text-green-700",
+    processing:"bg-blue-100 text-blue-700",shipped:"bg-blue-100 text-blue-700",
+    delivered:"bg-gray-100 text-gray-600",cancelled:"bg-red-100 text-red-700",
+  };
+
+  const saveTracking = async () => {
+    if (!supabase || !trackingNumber) return;
+    setSaving(true);
+    await supabase.from('orders').update({tracking_number: trackingNumber, status: 'shipped'}).eq('id', o.id);
+    onStatusChange(o.id, 'shipped');
+    setSaving(false);
+  };
+
+  return (
+    <div className={`border rounded-xl overflow-hidden ${expanded ? 'border-black' : 'border-black/10'}`}>
+      <div className="p-5 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="font-black text-sm">#{o.id.slice(0,8).toUpperCase()}</p>
+            <p className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString()}</p>
+            {o.shipping_name && <p className="text-xs text-gray-500 mt-1">{o.shipping_name}</p>}
+          </div>
+          <div className="text-right">
+            <p className="font-black text-sm">{String.fromCharCode(165)}{o.total_price?.toLocaleString()}</p>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[o.status] || 'bg-gray-100 text-gray-600'}`}>
+              {o.status?.replace(/_/g, ' ')}
+            </span>
+          </div>
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t border-black/10 p-5 space-y-4 bg-gray-50">
+          {o.shipping_name && (
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Shipping Address</p>
+              <div className="text-sm text-gray-700 space-y-0.5">
+                <p className="font-bold">{o.shipping_name}</p>
+                {o.shipping_postal_code && <p>{o.shipping_postal_code}</p>}
+                <p>{o.shipping_prefecture} {o.shipping_city}</p>
+                <p>{o.shipping_address_line1}</p>
+                {o.shipping_address_line2 && <p>{o.shipping_address_line2}</p>}
+              </div>
+            </div>
+          )}
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Update Status</p>
+            <div className="flex gap-2 flex-wrap">
+              {ORDER_STATUSES.map(s => (
+                <button key={s} onClick={() => onStatusChange(o.id, s)}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-bold border transition-all ${o.status === s ? 'bg-black text-white border-black' : 'border-black/10 hover:border-black'}`}>
+                  {s.replace(/_/g, ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tracking Number</p>
+            <div className="flex gap-2">
+              <input type="text" value={trackingNumber} onChange={e => setTrackingNumber(e.target.value)}
+                className="flex-1 border border-black/20 rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:border-black"
+                placeholder="e.g. 1234-5678-9012" />
+              <button onClick={saveTracking} disabled={saving || !trackingNumber}
+                className="px-4 py-2 bg-black text-white rounded-lg text-xs font-bold hover:bg-gray-900 disabled:opacity-50">
+                {saving ? '...' : 'Mark Shipped'}
+              </button>
+            </div>
+            {o.tracking_number && (
+              <p className="text-xs text-gray-500 mt-1">Current: <span className="font-bold text-black">{o.tracking_number}</span></p>
+            )}
+          </div>
         </div>
       )}
     </div>
