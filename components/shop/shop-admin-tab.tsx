@@ -296,6 +296,13 @@ export function OrderCard({order: o, onStatusChange}: {order: any; onStatusChang
   const [expanded, setExpanded] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState(o.tracking_number || '');
   const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (!expanded || !supabase || !o.user_id) return;
+    supabase.from('user_profiles').select('*').eq('id', o.user_id).single()
+      .then(({ data }) => { if (data) setProfile(data); });
+  }, [expanded, o.user_id]);
 
   const ORDER_STATUSES = ["pending","awaiting_payment","paid","processing","shipped","delivered","cancelled"];
   const STATUS_COLORS: Record<string, string> = {
@@ -331,6 +338,19 @@ export function OrderCard({order: o, onStatusChange}: {order: any; onStatusChang
       </div>
       {expanded && (
         <div className="border-t border-black/10 p-5 space-y-4 bg-gray-50">
+          {profile && (
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Customer</p>
+              <div className="text-sm text-gray-700 space-y-0.5">
+                <p className="font-bold">{profile.last_name} {profile.first_name}</p>
+                <p className="text-gray-500">@{profile.display_id || 'unknown'}</p>
+                {profile.postal_code && <p>{profile.postal_code}</p>}
+                {profile.prefecture && <p>{profile.prefecture} {profile.city}</p>}
+                {profile.address_line1 && <p>{profile.address_line1}</p>}
+                {profile.address_line2 && <p>{profile.address_line2}</p>}
+              </div>
+            </div>
+          )}
           {o.shipping_name && (
             <div>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Shipping Address</p>
