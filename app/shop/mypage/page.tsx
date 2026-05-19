@@ -110,6 +110,7 @@ export default function MyPage() {
       city: editForm.city,
       address_line1: editForm.address_line1,
       address_line2: editForm.address_line2 || null,
+      country: editForm.country,
     }).eq("id", user.id);
 
     if (error) { setEditError(error.message); setSaving(false); return; }
@@ -247,6 +248,7 @@ export default function MyPage() {
                     <p>{profile?.prefecture} {profile?.city}</p>
                     <p>{profile?.address_line1}</p>
                     {profile?.address_line2 && <p>{profile.address_line2}</p>}
+                {profile?.country && profile.country !== 'Japan' && <p className="font-bold">{profile.country}</p>}
                   </div>
                 </div>
               )}
@@ -330,6 +332,15 @@ export default function MyPage() {
                   <input type="text" value={editForm.address_line2}
                     onChange={(e) => setEditForm(f => ({ ...f, address_line2: e.target.value }))}
                     className="w-full border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">Country</label>
+                  <select value={editForm.country} onChange={(e) => setEditForm(f => ({ ...f, country: e.target.value }))}
+                    className="w-full border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black bg-white">
+                    {["Japan","United States","United Kingdom","Australia","Canada","France","Germany","Italy","Spain","Netherlands","Belgium","Singapore","China","South Korea","Taiwan","Hong Kong","Other"].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

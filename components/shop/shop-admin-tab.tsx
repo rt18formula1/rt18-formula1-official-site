@@ -311,6 +311,24 @@ export function OrderCard({order: o, onStatusChange}: {order: any; onStatusChang
     delivered:"bg-gray-100 text-gray-600",cancelled:"bg-red-100 text-red-700",
   };
 
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const sendShippingNotification = async () => {
+    if (!trackingNumber) { alert("Please enter tracking number first"); return; }
+    setSending(true);
+    try {
+      const res = await fetch("/api/shop/shipping-notification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: o.id, trackingNumber }),
+      });
+      if (res.ok) { setSent(true); alert("Shipping notification sent!"); }
+      else { const d = await res.json(); alert("Error: " + d.error); }
+    } catch (e: any) { alert("Error: " + e.message); }
+    setSending(false);
+  };
+
   const saveTracking = async () => {
     if (!supabase || !trackingNumber) return;
     setSaving(true);
@@ -388,6 +406,10 @@ export function OrderCard({order: o, onStatusChange}: {order: any; onStatusChang
             {o.tracking_number && (
               <p className="text-xs text-gray-500 mt-1">Current: <span className="font-bold text-black">{o.tracking_number}</span></p>
             )}
+            <button onClick={sendShippingNotification} disabled={sending || sent || !trackingNumber}
+              className="mt-2 w-full py-2 border border-black rounded-lg text-xs font-bold hover:bg-black hover:text-white transition-colors disabled:opacity-50">
+              {sent ? "Notification Sent!" : sending ? "Sending..." : "Send Shipping Notification Email"}
+            </button>
           </div>
         </div>
       )}

@@ -57,6 +57,7 @@ export async function POST(request: Request) {
       shipping_city: session.metadata?.shipping_city || null,
       shipping_address_line1: session.metadata?.shipping_address_line1 || null,
       shipping_address_line2: session.metadata?.shipping_address_line2 || null,
+      shipping_country: session.metadata?.shipping_country || "Japan",
     };
     console.log("Inserting order:", JSON.stringify(insertData));
 

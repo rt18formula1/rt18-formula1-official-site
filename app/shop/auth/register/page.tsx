@@ -23,6 +23,7 @@ export default function RegisterPage() {
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
   const [postalLoading, setPostalLoading] = useState(false);
+  const [country, setCountry] = useState("Japan");
   const [agreed, setAgreed] = useState(false);
 
   const fetchAddress = async () => {
@@ -54,7 +55,7 @@ export default function RegisterPage() {
         id: data.user.id, display_id: finalDisplayId,
         last_name: lastName, first_name: firstName,
         postal_code: postalCode, prefecture, city,
-        address_line1: addressLine1, address_line2: addressLine2,
+        address_line1: addressLine1, address_line2: addressLine2, country,
         agreed_at: new Date().toISOString(),
       });
     }
@@ -189,6 +190,29 @@ export default function RegisterPage() {
               <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Address Line 2 <span className="normal-case font-normal text-gray-400">(optional)</span></label>
               <input type="text" value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)}
                 className="w-full border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black" placeholder="Room 101" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Country *</label>
+              <select value={country} onChange={(e) => setCountry(e.target.value)}
+                className="w-full border border-black/20 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black bg-white">
+                <option value="Japan">Japan</option>
+                <option value="United States">United States</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="Australia">Australia</option>
+                <option value="Canada">Canada</option>
+                <option value="France">France</option>
+                <option value="Germany">Germany</option>
+                <option value="Italy">Italy</option>
+                <option value="Spain">Spain</option>
+                <option value="Netherlands">Netherlands</option>
+                <option value="Belgium">Belgium</option>
+                <option value="Singapore">Singapore</option>
+                <option value="China">China</option>
+                <option value="South Korea">South Korea</option>
+                <option value="Taiwan">Taiwan</option>
+                <option value="Hong Kong">Hong Kong</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
             <div className="flex gap-3 pt-2">
               <button onClick={() => setStep("profile")} className="flex-1 border border-black/20 rounded-xl py-3 text-sm font-bold hover:border-black transition-colors">Back</button>

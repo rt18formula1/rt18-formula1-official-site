@@ -59,6 +59,7 @@ export async function POST(request: Request) {
         shipping_city: shipping?.city || "",
         shipping_address_line1: shipping?.address1 || "",
         shipping_address_line2: shipping?.address2 || "",
+        shipping_country: shipping?.country || "Japan",
       },
     });
 
