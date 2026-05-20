@@ -40,7 +40,7 @@ export default function MyPage() {
     display_id: "", display_name: "",
     last_name: "", first_name: "",
     postal_code: "", prefecture: "", city: "",
-    address_line1: "", address_line2: "",
+    address_line1: "", address_line2: "", country: "Japan",
   });
   const [postalLoading, setPostalLoading] = useState(false);
 
@@ -67,6 +67,7 @@ export default function MyPage() {
           city: prof.city || "",
           address_line1: prof.address_line1 || "",
           address_line2: prof.address_line2 || "",
+          country: prof.country || "Japan",
         });
       }
       if (ords) setOrders(ords);
