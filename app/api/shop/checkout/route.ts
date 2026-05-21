@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { stripe } from "../../../../lib/stripe";
 import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
 
+function cleanText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -30,6 +34,34 @@ export async function POST(request: Request) {
     });
     if (totalAmount === 0) return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
 
+    const cartItems = items
+      .map((item: any) => {
+        const product = dbProducts.find((p: any) => p.id === item.id);
+        return product ? { id: product.id, quantity: Math.max(1, Number(item.quantity) || 1) } : null;
+      })
+      .filter(Boolean);
+
+    if (shipping) {
+      const profileUpdate = {
+        id: userId,
+        last_name: cleanText(shipping.lastName),
+        first_name: cleanText(shipping.firstName),
+        postal_code: cleanText(shipping.postalCode),
+        prefecture: cleanText(shipping.prefecture),
+        city: cleanText(shipping.city),
+        address_line1: cleanText(shipping.address1),
+        address_line2: cleanText(shipping.address2) || null,
+        country: cleanText(shipping.country) || "Japan",
+      };
+      const { error: profileError } = await supabaseAdmin
+        .from("user_profiles")
+        .upsert(profileUpdate, { onConflict: "id" });
+
+      if (profileError) {
+        console.error("Profile upsert error:", profileError);
+      }
+    }
+
     const origin = request.headers.get("origin") || "https://rt18-formula1-official-site.vercel.app";
 
     const session = await stripe.checkout.sessions.create({
@@ -53,6 +85,7 @@ export async function POST(request: Request) {
       metadata: {
         user_id: userId,
         item_ids: itemIds.join(","),
+        cart_quantities: cartItems.map((item: any) => `${item.id}:${item.quantity}`).join(","),
         shipping_name: shipping ? `${shipping.lastName} ${shipping.firstName}`.trim() : "",
         shipping_postal_code: shipping?.postalCode || "",
         shipping_prefecture: shipping?.prefecture || "",

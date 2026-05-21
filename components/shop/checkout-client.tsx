@@ -7,9 +7,10 @@ import { getMyProfile } from "@/lib/supabase-queries";
 import { supabase } from "@/lib/supabaseClient";
 
 export function CheckoutClient() {
-  const { items, totalPrice, totalCount } = useCart();
+  const { items, totalPrice } = useCart();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [checkoutError, setCheckoutError] = useState("");
   const router = useRouter();
 
   const [shipping, setShipping] = useState({
@@ -20,11 +21,27 @@ export function CheckoutClient() {
     city: "",
     address1: "",
     address2: "",
+    country: "Japan",
   });
+
+  const requiredFields = [
+    shipping.lastName,
+    shipping.firstName,
+    shipping.postalCode,
+    shipping.prefecture,
+    shipping.city,
+    shipping.address1,
+    shipping.country,
+  ];
+  const canCheckout = requiredFields.every((value) => value.trim().length > 0) && items.length > 0 && !loading;
 
   useEffect(() => {
     async function init() {
-      if (!supabase) return;
+      if (!supabase) {
+        setCheckoutError("Shop authentication is not configured in this environment.");
+        setLoading(false);
+        return;
+      }
       
       const { data: { user: authUser } } = await supabase.auth.getUser();
       
@@ -45,6 +62,7 @@ export function CheckoutClient() {
           city: profile.city || "",
           address1: profile.address_line1 || "",
           address2: profile.address_line2 || "",
+          country: profile.country || "Japan",
         });
       }
       setLoading(false);
@@ -53,6 +71,11 @@ export function CheckoutClient() {
   }, [router]);
 
   const handleCheckout = async () => {
+    setCheckoutError("");
+    if (!canCheckout) {
+      setCheckoutError("Please complete the required shipping fields before continuing.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/shop/checkout", {
@@ -64,17 +87,28 @@ export function CheckoutClient() {
       if (data.url) {
         window.location.href = data.url;
       } else if (data.error) {
-        alert(data.error);
+        setCheckoutError(data.error);
       }
     } catch (err) {
       console.error("Checkout failed", err);
-      alert("Failed to initiate checkout.");
+      setCheckoutError("Failed to initiate checkout.");
     } finally {
       setLoading(false);
     }
   };
 
   if (loading && !user) return <div className="max-w-4xl mx-auto px-4 py-24 text-center font-bold">Loading checkout...</div>;
+
+  if (!supabase) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-24">
+        <div className="rounded-3xl border border-black/10 bg-gray-50 p-8 text-center">
+          <h1 className="text-2xl font-black tracking-tight mb-3">Checkout unavailable</h1>
+          <p className="text-sm font-bold text-gray-500">{checkoutError}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     router.push("/shop/cart");
@@ -166,6 +200,19 @@ export function CheckoutClient() {
                 className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold border border-black/5 focus:bg-white transition-colors"
               />
             </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Country</label>
+              <select
+                value={shipping.country}
+                onChange={(e) => setShipping({ ...shipping, country: e.target.value })}
+                className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold border border-black/5 focus:bg-white transition-colors"
+              >
+                {["Japan","United States","United Kingdom","Australia","Canada","France","Germany","Italy","Spain","Netherlands","Belgium","Singapore","China","South Korea","Taiwan","Hong Kong","Other"].map((country) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </div>
           </section>
 
           {/* Payment (Managed Payments) */}
@@ -179,6 +226,11 @@ export function CheckoutClient() {
               <p className="font-bold text-gray-400 mb-2">Secure Payment via Stripe Checkout</p>
               <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em]">Managed Payments Enabled</p>
             </div>
+            {checkoutError && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                {checkoutError}
+              </div>
+            )}
           </section>
         </div>
 
@@ -220,7 +272,7 @@ export function CheckoutClient() {
 
             <button
               onClick={handleCheckout}
-              disabled={loading}
+              disabled={!canCheckout}
               className="w-full py-5 bg-white text-black rounded-2xl font-black text-sm hover:bg-gray-100 transition-all shadow-lg active:scale-95 disabled:opacity-50"
             >
               {loading ? "Redirecting..." : "Pay with Stripe"}

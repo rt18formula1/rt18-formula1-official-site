@@ -1,6 +1,26 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
 
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function addressHtml(order: any, fallbackName: string) {
+  return [
+    order.shipping_name || fallbackName,
+    order.shipping_postal_code,
+    `${order.shipping_prefecture || ""} ${order.shipping_city || ""}`.trim(),
+    order.shipping_address_line1,
+    order.shipping_address_line2,
+    order.shipping_country || "Japan",
+  ].filter(Boolean).map((line) => escapeHtml(line)).join("<br>");
+}
+
 export async function POST(request: Request) {
   try {
     const { orderId, trackingNumber } = await request.json();
@@ -40,26 +60,21 @@ export async function POST(request: Request) {
       to: email,
       subject: `Your order has been shipped! #${orderId.slice(0, 8).toUpperCase()} - rt18_formula1`,
       html: `
-        <h1>Your order has been shipped!</h1>
-        <p>Hi ${name},</p>
-        <p>Great news! Your order <strong>#${orderId.slice(0, 8).toUpperCase()}</strong> has been shipped.</p>
+        <div style="font-family: Arial, sans-serif; color: #111; line-height: 1.6;">
+        <h1 style="font-size: 24px; margin: 0 0 16px;">Your order has been shipped!</h1>
+        <p>Hi ${escapeHtml(name)},</p>
+        <p>Great news! Your order <strong>#${escapeHtml(orderId.slice(0, 8).toUpperCase())}</strong> has been shipped.</p>
         <br>
-        <p><strong>Tracking Number:</strong> ${trackingNumber}</p>
+        <p><strong>Tracking Number:</strong> ${escapeHtml(trackingNumber)}</p>
         <br>
-        <p>Shipping Address:</p>
-        <p>
-          ${order.shipping_name || name}<br>
-          ${order.shipping_postal_code || ""}<br>
-          ${order.shipping_prefecture || ""} ${order.shipping_city || ""}<br>
-          ${order.shipping_address_line1 || ""}<br>
-          ${order.shipping_address_line2 ? order.shipping_address_line2 + "<br>" : ""}
-          ${order.shipping_country || "Japan"}
-        </p>
+        <p><strong>Shipping Address:</strong></p>
+        <p>${addressHtml(order, name)}</p>
         <br>
         <p>You can check your order status at: <a href="https://rt18-formula1-official-site.vercel.app/shop/mypage">My Page</a></p>
         <br>
         <p>Thank you for your purchase!</p>
-        <p>rt18_formula1 Shop</p>
+        <p style="color: #666;">rt18_formula1 Shop</p>
+        </div>
       `,
     });
 

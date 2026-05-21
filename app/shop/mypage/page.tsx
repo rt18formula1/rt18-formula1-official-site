@@ -29,6 +29,7 @@ export default function MyPage() {
   const [profile, setProfile] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [commissions, setCommissions] = useState<any[]>([]);
+  const [activateCodes, setActivateCodes] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"orders" | "commissions" | "profile">("orders");
 
@@ -50,10 +51,11 @@ export default function MyPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/shop/auth/login"); return; }
       setUser(user);
-      const [{ data: prof }, { data: ords }, { data: comms }] = await Promise.all([
+      const [{ data: prof }, { data: ords }, { data: comms }, { data: codes }] = await Promise.all([
         supabase.from("user_profiles").select("*").eq("id", user.id).single(),
-        supabase.from("orders").select("*, order_items(*, products(name_ja, name_en, type, image_url))").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("orders").select("*, order_items(*, products(name_ja, name_en, type, image_url, digital_contents(delivery_type, content)))").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("commissions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("activate_codes").select("product_id, code").eq("used_by", user.id).order("used_at", { ascending: false }),
       ]);
       if (prof) {
         setProfile(prof);
@@ -72,6 +74,12 @@ export default function MyPage() {
       }
       if (ords) setOrders(ords);
       if (comms) setCommissions(comms);
+      if (codes) {
+        setActivateCodes(codes.reduce((acc: Record<string, string[]>, code: any) => {
+          acc[code.product_id] = [...(acc[code.product_id] || []), code.code];
+          return acc;
+        }, {}));
+      }
       setLoading(false);
     };
     load();
@@ -175,7 +183,75 @@ export default function MyPage() {
                       {order.status.replace(/_/g, " ")}
                     </span>
                   </div>
-                  <p className="text-2xl font-black">{String.fromCharCode(165)}{order.total_price.toLocaleString()}</p>
+                  <p className="text-2xl font-black mb-5">{String.fromCharCode(165)}{order.total_price.toLocaleString()}</p>
+
+                  <div className="space-y-3 border-t border-black/5 pt-4">
+                    {(order.order_items || []).map((item: any) => {
+                      const product = item.products;
+                      const digitalContents = product?.digital_contents || [];
+                      const productCodes = activateCodes[item.product_id] || [];
+                      return (
+                        <div key={item.id} className="rounded-xl bg-gray-50 p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="font-bold text-sm">{product?.name_en || product?.name_ja || "Product"}</p>
+                              <p className="text-xs text-gray-400 mt-1">Qty {item.quantity} / {String.fromCharCode(165)}{item.price?.toLocaleString()} each</p>
+                            </div>
+                            <p className="text-sm font-black">{String.fromCharCode(165)}{(item.price * item.quantity).toLocaleString()}</p>
+                          </div>
+
+                          {product?.type === "digital" && (
+                            <div className="mt-3 rounded-lg border border-black/10 bg-white p-3 text-xs text-gray-600">
+                              <p className="font-black text-[10px] uppercase tracking-widest text-gray-400 mb-2">Digital Delivery</p>
+                              {digitalContents.length === 0 && productCodes.length === 0 ? (
+                                <p>Preparing your digital content.</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {digitalContents.map((content: any, index: number) => (
+                                    <div key={`${content.delivery_type}-${index}`}>
+                                      {content.delivery_type === "file" || content.delivery_type === "link" ? (
+                                        <a href={content.content} target="_blank" rel="noreferrer" className="font-bold underline hover:text-black">
+                                          Open download link
+                                        </a>
+                                      ) : content.delivery_type === "text" ? (
+                                        <p className="whitespace-pre-wrap">{content.content}</p>
+                                      ) : (
+                                        <p>Activate code will appear after assignment.</p>
+                                      )}
+                                    </div>
+                                  ))}
+                                  {productCodes.map((code) => (
+                                    <p key={code} className="font-mono font-bold text-black">{code}</p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {(order.tracking_number || order.shipping_address_line1) && (
+                    <div className="mt-4 grid gap-3 border-t border-black/5 pt-4 text-sm text-gray-600 md:grid-cols-2">
+                      {order.tracking_number && (
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Tracking Number</p>
+                          <p className="font-bold text-black">{order.tracking_number}</p>
+                        </div>
+                      )}
+                      {order.shipping_address_line1 && (
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Shipping Address</p>
+                          <p className="font-bold text-black">{order.shipping_name}</p>
+                          <p>{order.shipping_postal_code}</p>
+                          <p>{order.shipping_prefecture} {order.shipping_city}</p>
+                          <p>{order.shipping_address_line1}</p>
+                          {order.shipping_address_line2 && <p>{order.shipping_address_line2}</p>}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

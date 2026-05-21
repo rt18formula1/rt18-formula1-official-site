@@ -1,7 +1,65 @@
-import React from "react";
 import { NextResponse } from "next/server";
 import { stripe } from "../../../../lib/stripe";
 import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatJPY(value: unknown) {
+  return `&yen;${Number(value || 0).toLocaleString("ja-JP")}`;
+}
+
+function parseCartItems(metadata: any) {
+  if (metadata?.cart_quantities) {
+    return String(metadata.cart_quantities)
+      .split(",")
+      .map((entry) => {
+        const [id, quantity] = entry.split(":");
+        return { id, quantity: Math.max(1, Number(quantity) || 1) };
+      })
+      .filter((item) => item.id);
+  }
+
+  if (metadata?.cart_items) {
+    try {
+      const parsed = JSON.parse(metadata.cart_items);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) => ({
+            id: String(item.id || ""),
+            quantity: Math.max(1, Number(item.quantity) || 1),
+          }))
+          .filter((item) => item.id);
+      }
+    } catch (error) {
+      console.error("Failed to parse cart_items metadata:", error);
+    }
+  }
+
+  return String(metadata?.item_ids || "")
+    .split(",")
+    .filter(Boolean)
+    .map((id) => ({ id, quantity: 1 }));
+}
+
+function addressHtml(order: any, fallbackName: string) {
+  const lines = [
+    order.shipping_name || fallbackName,
+    order.shipping_postal_code,
+    `${order.shipping_prefecture || ""} ${order.shipping_city || ""}`.trim(),
+    order.shipping_address_line1,
+    order.shipping_address_line2,
+    order.shipping_country || "Japan",
+  ].filter(Boolean);
+
+  return lines.map((line) => escapeHtml(line)).join("<br>");
+}
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -28,7 +86,7 @@ export async function POST(request: Request) {
     console.log("Session metadata:", JSON.stringify(session.metadata));
     console.log("Amount total:", session.amount_total);
 
-    const { user_id, item_ids } = session.metadata || {};
+    const { user_id } = session.metadata || {};
 
     if (!user_id) {
       console.error("No user_id in metadata");
@@ -75,17 +133,23 @@ export async function POST(request: Request) {
     console.log("Order created:", order.id);
 
     // Create order_items
-    if (item_ids) {
-      const ids = item_ids.split(",").filter(Boolean);
+    const cartItems = parseCartItems(session.metadata);
+    if (cartItems.length > 0) {
+      const ids = cartItems.map((item) => item.id);
       const { data: dbProducts } = await supabaseAdmin.from("products").select("*").in("id", ids);
 
       if (dbProducts && dbProducts.length > 0) {
-        const orderItems = dbProducts.map((p: any) => ({
-          order_id: order.id,
-          product_id: p.id,
-          quantity: 1,
-          price: p.price,
-        }));
+        const orderItems = [];
+        for (const item of cartItems) {
+          const product = dbProducts.find((p: any) => p.id === item.id);
+          if (!product) continue;
+          orderItems.push({
+            order_id: order.id,
+            product_id: product.id,
+            quantity: item.quantity,
+            price: product.price,
+          });
+        }
         const { error: itemsError } = await supabaseAdmin.from("order_items").insert(orderItems);
         if (itemsError) console.error("Order items error:", JSON.stringify(itemsError));
         else console.log("Order items created:", orderItems.length);
@@ -118,11 +182,27 @@ export async function POST(request: Request) {
         if (authData.user?.email) {
           const { Resend } = await import("resend");
           const resend = new Resend(resendKey);
+          const customerName = order.shipping_name || [profile?.last_name, profile?.first_name].filter(Boolean).join(" ") || profile?.display_name || "Customer";
           await resend.emails.send({
             from: "rt18_formula1 Shop <onboarding@resend.dev>",
             to: authData.user.email,
             subject: `Order Confirmation #${order.id.slice(0, 8).toUpperCase()} - rt18_formula1`,
-            html: `<h1>Thank you for your order!</h1><p>Order ID: ${order.id.slice(0, 8).toUpperCase()}</p><p>Total: \${order.total_price.toLocaleString()}</p>`,
+            html: `
+              <div style="font-family: Arial, sans-serif; color: #111; line-height: 1.6;">
+                <h1 style="font-size: 24px; margin: 0 0 16px;">Thank you for your order!</h1>
+                <p>Hi ${escapeHtml(customerName)},</p>
+                <p>Your payment has been confirmed.</p>
+                <p><strong>Order ID:</strong> #${escapeHtml(order.id.slice(0, 8).toUpperCase())}</p>
+                <p><strong>Total:</strong> ${formatJPY(order.total_price)}</p>
+                <p><strong>Status:</strong> ${escapeHtml(order.status)}</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 24px 0;" />
+                <p style="margin-bottom: 8px;"><strong>Shipping to:</strong></p>
+                <p>${addressHtml(order, customerName)}</p>
+                <p style="margin-top: 24px;">You can check your order here: <a href="https://rt18-formula1-official-site.vercel.app/shop/mypage">My Page</a></p>
+                <p>Thank you for your purchase!</p>
+                <p style="color: #666;">rt18_formula1 Shop</p>
+              </div>
+            `,
           });
           console.log("Confirmation email sent to:", authData.user.email);
         }

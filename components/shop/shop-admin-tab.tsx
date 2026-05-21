@@ -38,7 +38,7 @@ export function ShopAdminTab() {
     if (!supabase) return;
     const [{ data: p },{ data: o },{ data: c }] = await Promise.all([
       supabase.from("products").select("*").order("sort_order",{ascending:true}),
-      supabase.from("orders").select("*").order("created_at",{ascending:false}),
+      supabase.from("orders").select("*, order_items(*, products(name_ja, name_en, type, image_url))").order("created_at",{ascending:false}),
       supabase.from("commissions").select("*").order("created_at",{ascending:false}),
     ]);
     if (p) setProducts(p);
@@ -378,6 +378,22 @@ export function OrderCard({order: o, onStatusChange}: {order: any; onStatusChang
                 <p>{o.shipping_prefecture} {o.shipping_city}</p>
                 <p>{o.shipping_address_line1}</p>
                 {o.shipping_address_line2 && <p>{o.shipping_address_line2}</p>}
+              </div>
+            </div>
+          )}
+          {(o.order_items || []).length > 0 && (
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Items</p>
+              <div className="space-y-2">
+                {o.order_items.map((item: any) => (
+                  <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-bold">{item.products?.name_en || item.products?.name_ja || "Product"}</p>
+                      <p className="text-xs text-gray-400">{item.products?.type || "item"} / Qty {item.quantity}</p>
+                    </div>
+                    <p className="shrink-0 font-black">{String.fromCharCode(165)}{(item.price * item.quantity).toLocaleString()}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
