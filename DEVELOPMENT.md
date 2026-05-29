@@ -162,3 +162,23 @@ ClaudeやDevinなどの後続エージェントは、作業前に必ず以下の
 - [ ] 注文検索・絞り込み・CSV出力
 - [ ] Resend独自ドメイン送信元への切り替え
 - [ ] lint既存エラーの整理
+
+---
+
+### 2026-05-29 プロジェクト保存場所の移行
+
+#### 作業内容
+- プロジェクトの保存場所を `/Users/Ryusei_Tsukamoto/Downloads/rt18_formula1-Official-Site/` から外部HDD `/Volumes/Mac Hdd/RYUSEI/rt18_formula1-Official-Site/` へ移行。
+- 移行手順:
+  1. `rsync` でプロジェクトファイル（node_modules, .next 除く）を外部HDDへコピー
+  2. `.git` ディレクトリを外部HDDへコピー（Git履歴を保持）
+  3. `node_modules` を元フォルダからrsyncでコピー
+- 外部HDD: `/Volumes/Mac Hdd/` (3.6TB, 使用量299GB, 空き527GB)
+
+#### 新しい作業パス
+**今後の開発は `/Volumes/Mac Hdd/RYUSEI/rt18_formula1-Official-Site/` で行うこと。**
+
+#### 後続エージェントへの注意
+- プロジェクトの正式パスが変更されました。
+- `cd '/Volumes/Mac Hdd/RYUSEI/rt18_formula1-Official-Site/'` でプロジェクトに移動してから作業してください。
+- npm/node コマンドは nvm 経由で使用: `export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"`
