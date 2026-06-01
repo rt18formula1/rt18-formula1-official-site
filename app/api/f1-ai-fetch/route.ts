@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const ANTHROPCI_API_URL = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
 const SCHEDULE_SYSTEM_PROMPT = `You are an F1 data specialist. Fetch the OFFICIAL weekend schedule for the specified Grand Prix from Formula1.com.
 Return ONLY valid JSON, no markdown, no explanation.
