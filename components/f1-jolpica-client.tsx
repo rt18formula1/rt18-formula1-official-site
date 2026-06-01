@@ -14,7 +14,7 @@ export default function F1JolpicaClient() {
   const [raceSchedule, setRaceSchedule] = useState<F1OfficialRace[]>([]);
   const [selectedRace, setSelectedRace] = useState<F1OfficialRace | null>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [activeTab, setActiveTab] = useState<'schedule' | 'details' | 'standings' | 'alldata'>('schedule');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'details' | 'standings' | 'alldata' | 'aifetch'>('schedule');
   const [standingsTab, setStandingsTab] = useState<'drivers' | 'constructors'>('drivers');
   const [allDataTab, setAllDataTab] = useState<'qualifying' | 'circuits' | 'drivers' | 'constructors' | 'laps' | 'pitstops'>('qualifying');
   const [raceSessionTab, setRaceSessionTab] = useState<'sprint' | 'qualifying' | 'race'>('race');
@@ -29,6 +29,14 @@ export default function F1JolpicaClient() {
   const [driversData, setDriversData] = useState<any>(null);
   const [constructorsData, setConstructorsData] = useState<any>(null);
   const [lapsData, setLapsData] = useState<any>(null);
+  // AI取得機能の状態
+  const [aiGrandPrix, setAiGrandPrix] = useState('');
+  const [aiYear, setAiYear] = useState(new Date().getFullYear());
+  const [aiSession, setAiSession] = useState('RACE');
+  const [aiFetchType, setAiFetchType] = useState<'schedule' | 'result'>('schedule');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<any>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [pitstopsData, setPitstopsData] = useState<any>(null);
   const [allDataLoading, setAllDataLoading] = useState(false);
   
@@ -140,6 +148,26 @@ export default function F1JolpicaClient() {
     }
   };
 
+
+  // AI取得関数
+  const fetchAIData = async () => {
+    if (!aiGrandPrix.trim()) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiResult(null);
+    try {
+      const res = await fetch('/api/f1-ai-fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: aiFetchType, grandPrix: aiGrandPrix, year: aiYear, session: aiSession }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) { setAiError(data.error || 'Unknown error'); }
+      else { setAiResult(data.data); }
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'Fetch failed');
+    } finally { setAiLoading(false); }
+  };
   // タブがstandingsに切り替わったときにスタンディングスを取得
   useEffect(() => {
     if (activeTab === 'standings') {
@@ -363,6 +391,14 @@ export default function F1JolpicaClient() {
               }`}
             >
               {language === 'ja' ? '全データ' : 'All Data'}
+            </button>
+            <button
+              onClick={() => { setActiveTab('aifetch'); setSelectedRace(null); }}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'aifetch' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {language === 'ja' ? 'AI取得' : 'AI Fetch'}
             </button>
             {selectedRace && (
               <button
@@ -1091,6 +1127,113 @@ export default function F1JolpicaClient() {
                         ? 'データがありません' 
                         : 'No data available'}
                     </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {/* AI取得タブ */}
+        {activeTab === 'aifetch' && (
+          <div className="space-y-6">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-2">
+                {language === 'ja' ? 'AI データ取得' : 'AI Data Fetch'}
+              </h2>
+              <p className="text-sm text-gray-500 mb-5">
+                {language === 'ja' ? 'ClaudeがWebで公式データを取得します' : 'Claude fetches official data from Formula1.com via web search'}
+              </p>
+              <div className="flex gap-3 mb-5">
+                <button onClick={() => setAiFetchType('schedule')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${aiFetchType === 'schedule' ? 'bg-red-600 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
+                  {language === 'ja' ? '週末スケジュール' : 'Weekend Schedule'}
+                </button>
+                <button onClick={() => setAiFetchType('result')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${aiFetchType === 'result' ? 'bg-red-600 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
+                  {language === 'ja' ? 'セッション結果' : 'Session Result'}
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Grand Prix Name</label>
+                  <input type="text" value={aiGrandPrix} onChange={(e) => setAiGrandPrix(e.target.value)}
+                    placeholder="e.g. FORMULA 1 LOUIS VUITTON GRAND PRIX DE MONACO 2026"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Year</label>
+                  <input type="number" value={aiYear} onChange={(e) => setAiYear(Number(e.target.value))}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+                </div>
+              </div>
+              {aiFetchType === 'result' && (
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Session</label>
+                  <select value={aiSession} onChange={(e) => setAiSession(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <option value="RACE">Race</option>
+                    <option value="QUALIFYING">Qualifying</option>
+                    <option value="SPRINT">Sprint</option>
+                    <option value="SPRINT QUALIFYING">Sprint Qualifying</option>
+                    <option value="PRACTICE 1">Practice 1</option>
+                    <option value="PRACTICE 2">Practice 2</option>
+                    <option value="PRACTICE 3">Practice 3</option>
+                  </select>
+                </div>
+              )}
+              <button onClick={fetchAIData} disabled={aiLoading || !aiGrandPrix.trim()}
+                className="w-full md:w-auto px-6 py-2.5 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                {aiLoading ? (language === 'ja' ? '取得中...' : 'Fetching...') : (language === 'ja' ? 'AIで取得' : 'Fetch with AI')}
+              </button>
+            </div>
+            {aiError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+                <strong>Error:</strong> {aiError}
+              </div>
+            )}
+            {aiResult && (
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-gray-900 text-white px-4 py-3 flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    {aiFetchType === 'schedule' ? (language === 'ja' ? '週末スケジュール' : 'Weekend Schedule') : (language === 'ja' ? 'セッション結果' : 'Session Result')}
+                  </span>
+                  <span className="text-xs text-gray-400">via Claude AI + Web Search</span>
+                </div>
+                {aiFetchType === 'schedule' && aiResult.sessions && (
+                  <div className="p-5">
+                    <h3 className="font-bold text-gray-900 mb-1">{aiResult.grandPrix || aiGrandPrix}</h3>
+                    {aiResult.isSprintWeekend && <span className="inline-block text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded mb-3">Sprint Weekend</span>}
+                    <div className="mt-3 space-y-3">
+                      {aiResult.sessions.map((s: any, i: number) => (
+                        <div key={i} className="flex items-start gap-4 text-sm border-b border-gray-100 pb-3">
+                          <div className="w-36 font-medium text-gray-900 shrink-0">{s.name}</div>
+                          <div className="text-gray-500">{s.date}</div>
+                          <div className="text-gray-700">
+                            <div>Track: {s.trackTime} <span className="text-xs text-gray-400">({s.trackTimezone})</span></div>
+                            <div>Japan: {s.japanTime} <span className="text-xs text-gray-400">(JST)</span></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {aiFetchType === 'result' && aiResult.results && (
+                  <div className="p-5">
+                    <h3 className="font-bold text-gray-900 mb-1">{aiGrandPrix} — {aiSession}</h3>
+                    <div className="mt-3 space-y-1">
+                      {aiResult.results.map((r: string, i: number) => (
+                        <div key={i} className="flex items-center gap-3 text-sm py-1 border-b border-gray-50">
+                          <span className="w-8 text-xs font-bold text-red-600">{r.split(' ')[0]}</span>
+                          <span className="text-gray-900">{r.split(' ').slice(1).join(' ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {aiResult.notes && <p className="mt-4 text-xs text-gray-500 bg-gray-50 rounded p-3">{aiResult.notes}</p>}
+                  </div>
+                )}
+                {aiResult.raw && (
+                  <div className="p-5">
+                    <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono">{aiResult.raw}</pre>
                   </div>
                 )}
               </div>

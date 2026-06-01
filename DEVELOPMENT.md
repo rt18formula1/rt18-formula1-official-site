@@ -182,3 +182,34 @@ ClaudeやDevinなどの後続エージェントは、作業前に必ず以下の
 - プロジェクトの正式パスが変更されました。
 - `cd '/Volumes/Mac Hdd/RYUSEI/rt18_formula1-Official-Site/'` でプロジェクトに移動してから作業してください。
 - npm/node コマンドは nvm 経由で使用: `export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"`
+
+---
+
+### 2026-06-01 Claude作業ログ: F1DB AI取得機能の追加
+
+#### 実装内容
+- **新規APIルート `app/api/f1-ai-fetch/route.ts`** を作成
+  - Anthropic claude-sonnet-4-20250514 + web_search_20250305 ツールを使用
+  - `type: 'schedule'` → グランプリの週末スケジュール（TrackTime / JapanTime付き）を取得
+  - `type: 'result'` → 指定セッション（Race / Qualifying / Sprint等）の公式リザルトを取得
+  - 環境変数 `ANTHROPIC_API_KEY` が必須（Vercelに要設定）
+
+- **`components/f1-jolpica-client.tsx` にAI取得タブを追加**
+  - タブに「AI取得 / AI Fetch」を追加（activeTab: 'aifetch'）
+  - 週末スケジュール / セッション結果の切り替え
+  - Grand Prix名・Year・Sessionを入力してAIで取得
+  - 結果をTrackTime + JapanTimeのテーブル形式で表示
+
+#### 重要: 環境変数
+- Vercelダッシュボードで `ANTHROPIC_API_KEY` の追加が必要
+- プロジェクト設定 → Environment Variables → `ANTHROPIC_API_KEY` を追加
+
+#### Git / Deploy
+- Commit: 後続で記録
+- Push: origin/main へ push 済み
+- Production deploy: npx vercel --prod 実行済み
+
+#### 後続エージェントへの注意
+- `ANTHROPIC_API_KEY` がVercelに未設定の場合、AI取得ボタン押下時に500エラーが出る
+- APIルートは `/app/api/f1-ai-fetch/route.ts` に存在
+- f1-jolpica-clientの他タブ（schedule, standings等）は変更なし
