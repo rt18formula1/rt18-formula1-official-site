@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
 
-const SCHEDULE_SYSTEM_PROMPT = `You are an F1 data specialist. Fetch the OFFICIAL weekend schedule for the specified Grand Prix from Formula1.com.
+const SCHEDULE_PROMPT_BASE = `You are an F1 data specialist. Fetch the OFFICIAL weekend schedule for the specified Grand Prix from Formula1.com.
 Return ONLY valid JSON, no markdown, no explanation.
 
 IMPORTANT RULES:
@@ -10,10 +11,11 @@ IMPORTANT RULES:
 - Times in both local track time and Japan Time (JST = UTC+9)
 - Format dates as MM/DD
 - For sprint weekends, replace Practice 2/3 with Sprint Qualifying and Sprint
+- If official Formula1.com data is unavailable, use the most authoritative official F1 source available and include a note
 
 Return JSON in this exact schema:
 {
-  "grandPrix": "FORMULA 1 G	AND LRIX NAME YEAR",
+  "grandPrix": "FORMULA 1 GRAND PRIX NAME YEAR",
   "isSprintWeekend": false,
   "sessions": [
     {
@@ -23,20 +25,158 @@ Return JSON in this exact schema:
       "japanTime": "HH:MM - HH:MM",
       "trackTimezone": "UTC+X"
     }
-  ]
+  ],
+  "notes": "string or null"
 }`;
 
-const RESULT_SYSTEM_PROMPT = `You are an F1 data specialist. Fetch the OFFICIAL full result for the specified session from Formula1.com.
+const RESULT_PROMPT_BASE = `You are an F1 data specialist. Fetch the OFFICIAL full result for the specified session from Formula1.com.
 Return ONLY valid JSON, no markdown, no explanation.
 
 IMPORTANT RULES:
 - List ALL drivers who participated (typically 20-22 drivers)
 - Use full driver names (e.g., "Max Verstappen", "Lando Norris")
 - Format: Px [Full Name] (e.g., P1 Max Verstappen)
-- Include notes for DSQ, penalties, 107% rule exceptions
+- If a driver was disqualified, still list them at their finishing position but add a note
+- If there are notes (DSQ, penalties applied post-race, 107% rule exceptions), include them
 
 Return JSON in this exact schema:
-{"results": ["P1 Full Name"], "notes": "string or null"}`;
+{"results": ["P1 Full Name", ...], "notes": "string or null"}`;
+
+const scheduleSchema = {
+  type: 'OBJECT',
+  properties: {
+    grandPrix: { type: 'STRING' },
+    isSprintWeekend: { type: 'BOOLEAN' },
+    sessions: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          name: { type: 'STRING' },
+          date: { type: 'STRING' },
+          trackTime: { type: 'STRING' },
+          japanTime: { type: 'STRING' },
+          trackTimezone: { type: 'STRING' },
+        },
+        required: ['name', 'date', 'trackTime', 'japanTime', 'trackTimezone'],
+      },
+    },
+    notes: { type: 'STRING', nullable: true },
+  },
+  required: ['grandPrix', 'isSprintWeekend', 'sessions', 'notes'],
+};
+
+const resultSchema = {
+  type: 'OBJECT',
+  properties: {
+    results: {
+      type: 'ARRAY',
+      items: { type: 'STRING' },
+    },
+    notes: { type: 'STRING', nullable: true },
+  },
+  required: ['results', 'notes'],
+};
+
+function extractText(data: any) {
+  return data?.candidates?.[0]?.content?.parts
+    ?.map((part: any) => part.text)
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}
+
+function extractSources(data: any) {
+  const chunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks;
+  if (!Array.isArray(chunks)) return [];
+
+  return chunks
+    .map((chunk: any) => chunk.web)
+    .filter((web: any) => web?.uri)
+    .map((web: any) => ({
+      title: web.title || web.uri,
+      uri: web.uri,
+    }));
+}
+
+async function callGemini(systemPrompt: string, userMessage: string, responseSchema: any) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return {
+      ok: false,
+      status: 500,
+      payload: { error: 'GEMINI_API_KEY not configured' },
+    };
+  }
+
+  const response = await fetch(`${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+      },
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: userMessage }],
+        },
+      ],
+      tools: [
+        {
+          google_search: {},
+        },
+      ],
+      generationConfig: {
+        response_mime_type: 'application/json',
+        response_schema: responseSchema,
+      },
+    }),
+  });
+
+  const data = await response.json().catch(async () => ({ raw: await response.text() }));
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: 500,
+      payload: {
+        error: `Gemini API error: ${response.status}`,
+        detail: data,
+      },
+    };
+  }
+
+  const text = extractText(data);
+  if (!text) {
+    return {
+      ok: false,
+      status: 500,
+      payload: { error: 'No text response from Gemini', raw: data },
+    };
+  }
+
+  try {
+    return {
+      ok: true,
+      payload: {
+        data: JSON.parse(text.replace(/```json\n?|```\n?/g, '').trim()),
+        sources: extractSources(data),
+      },
+    };
+  } catch {
+    return {
+      ok: true,
+      payload: {
+        data: { raw: text },
+        sources: extractSources(data),
+      },
+    };
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -47,61 +187,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields: type, grandPrix, year' }, { status: 400 });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 });
-    }
-
     let systemPrompt: string;
     let userMessage: string;
+    let responseSchema: any;
 
     if (type === 'schedule') {
-      systemPrompt = SCHEDULE_SYSTEM_PROMPT;
-      userMessage = `Grand Prix: ${grandPrix}\nYear: ${year}\n\nFetch the complete official weekend schedule for this Grand Prix including all session times in local track time and Japan Time (JST).`;
+      systemPrompt = SCHEDULE_PROMPT_BASE;
+      responseSchema = scheduleSchema;
+      userMessage = `Grand Prix: ${grandPrix}
+Year: ${year}
+
+Fetch the complete official weekend schedule for this Grand Prix including all session times in local track time and Japan Time (JST).`;
     } else if (type === 'result') {
       if (!session) {
         return NextResponse.json({ error: 'Missing session field for result type' }, { status: 400 });
       }
-      systemPrompt = RESULT_SYSTEM_PROMPT;
-      userMessage = `Grand Prix: ${grandPrix}\nSession: ${session}\nYear: ${year}\n\nFetch the complete official result for this specific session.`;
+      systemPrompt = RESULT_PROMPT_BASE;
+      responseSchema = resultSchema;
+      userMessage = `Grand Prix: ${grandPrix}
+Session: ${session}
+Year: ${year}
+
+Fetch the complete official result for this specific session.`;
     } else {
-      return NextResponse.json({ error: 'Invalid type. Must be schedule or lesult' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid type. Must be schedule or result' }, { status: 400 });
     }
 
-    const anthropicResponse =
-await fetch(ANTHROPIC_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json', 'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', max_tokens: 2000,
-        system: systemPrompt, messages: [{ role: 'user', content: userMessage }],
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      }),
+    const result = await callGemini(systemPrompt, userMessage, responseSchema);
+    if (!result.ok) {
+      return NextResponse.json(result.payload, { status: result.status });
+    }
+
+    return NextResponse.json({
+      success: true,
+      type,
+      model: GEMINI_MODEL,
+      provider: 'gemini',
+      ...result.payload,
     });
-
-    if (!anthropicResponse.ok) {
-      const errText = await anthropicResponse.text();
-      return NextResponse.json({ error: `Anthropic API error: ${anthropicResponse.status}`, detail: errText }, { status: 500 });
-    }
-
-    const data = await anthropicResponse.json();
-    const textBlock = data.content?.find((block: any) => block.type === 'text');
-    if (!textBlock?.text) {
-      return NextResponse.json({ error: 'No text response from AI', raw: data }, { status: 500 });
-    }
-
-    let parsed: any;
-    try {
-      const clean = textBlock.text.replace(/```json\n?|```\n?/g, '').trim();
-      parsed = JSON.parse(clean);
-    } catch {
-      parsed = { raw: textBlock.text };
-    }
-
-    return NextResponse.json({ success: true, data: parsed, type });
   } catch (error) {
     console.error('f1-ai-fetch error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

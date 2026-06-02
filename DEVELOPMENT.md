@@ -213,3 +213,29 @@ ClaudeやDevinなどの後続エージェントは、作業前に必ず以下の
 - `ANTHROPIC_API_KEY` がVercelに未設定の場合、AI取得ボタン押下時に500エラーが出る
 - APIルートは `/app/api/f1-ai-fetch/route.ts` に存在
 - f1-jolpica-clientの他タブ（schedule, standings等）は変更なし
+
+---
+
+### 2026-06-02 Codex作業ログ: F1DB AI取得機能をGemini構成へ移行
+
+#### 実装内容
+- **`app/api/f1-ai-fetch/route.ts` をGemini API構成に変更**
+  - Base44側で使用していた `add_context_from_internet: true + gemini_3_flash + response_json_schema` の考え方に合わせ、Gemini REST APIの `google_search` tool と `generationConfig.response_schema` を使用。
+  - `RESULT_PROMPT_BASE` はユーザー提示のプロンプトに合わせ、DSQ・ペナルティ・107%例外などのnotesを含めるルールを反映。
+  - レスポンスに `provider: "gemini"`, `model`, `sources` を含めるようにした。
+  - `GEMINI_MODEL` 未設定時のデフォルトは `gemini-3-flash-preview`。
+
+- **`components/f1-jolpica-client.tsx` のAI取得タブを更新**
+  - 表示文を Claude から Gemini + Google Search に変更。
+  - Gemini grounding metadata 由来の参照元URLを結果下部に表示。
+  - APIエラー詳細がUIに出るように改善。
+
+#### 重要: 環境変数
+- Vercelダッシュボードで `GEMINI_API_KEY` の設定が必要。
+- 必要に応じて `GEMINI_MODEL` を設定可能。未設定時は `gemini-3-flash-preview`。
+- 旧 `ANTHROPIC_API_KEY` はこのAI取得APIでは不要。
+
+#### 検証
+- `npx tsc --noEmit`: 成功。
+- `npm run build`: 成功。既存の `/calendar` Dynamic server usage 警告と、ローカルSupabaseキー不足による取得エラーは出るがビルドは完了。
+- ローカル `.env.local` の `GEMINI_API_KEY` は空のため、実際のGemini検索取得は未検証。

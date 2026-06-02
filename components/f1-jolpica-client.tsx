@@ -36,6 +36,7 @@ export default function F1JolpicaClient() {
   const [aiFetchType, setAiFetchType] = useState<'schedule' | 'result'>('schedule');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<any>(null);
+  const [aiSources, setAiSources] = useState<Array<{ title: string; uri: string }>>([]);
   const [aiError, setAiError] = useState<string | null>(null);
   const [pitstopsData, setPitstopsData] = useState<any>(null);
   const [allDataLoading, setAllDataLoading] = useState(false);
@@ -155,6 +156,7 @@ export default function F1JolpicaClient() {
     setAiLoading(true);
     setAiError(null);
     setAiResult(null);
+    setAiSources([]);
     try {
       const res = await fetch('/api/f1-ai-fetch', {
         method: 'POST',
@@ -162,8 +164,14 @@ export default function F1JolpicaClient() {
         body: JSON.stringify({ type: aiFetchType, grandPrix: aiGrandPrix, year: aiYear, session: aiSession }),
       });
       const data = await res.json();
-      if (!res.ok || !data.success) { setAiError(data.error || 'Unknown error'); }
-      else { setAiResult(data.data); }
+      if (!res.ok || !data.success) {
+        const detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail || '');
+        setAiError([data.error || 'Unknown error', detail].filter(Boolean).join(' - '));
+      }
+      else {
+        setAiResult(data.data);
+        setAiSources(Array.isArray(data.sources) ? data.sources : []);
+      }
     } catch (e) {
       setAiError(e instanceof Error ? e.message : 'Fetch failed');
     } finally { setAiLoading(false); }
@@ -1141,7 +1149,7 @@ export default function F1JolpicaClient() {
                 {language === 'ja' ? 'AI データ取得' : 'AI Data Fetch'}
               </h2>
               <p className="text-sm text-gray-500 mb-5">
-                {language === 'ja' ? 'ClaudeがWebで公式データを取得します' : 'Claude fetches official data from Formula1.com via web search'}
+                {language === 'ja' ? 'GeminiがWeb検索でFormula1.comの公式データを取得します' : 'Gemini fetches official data from Formula1.com via web search'}
               </p>
               <div className="flex gap-3 mb-5">
                 <button onClick={() => setAiFetchType('schedule')}
@@ -1197,7 +1205,7 @@ export default function F1JolpicaClient() {
                   <span className="text-sm font-medium">
                     {aiFetchType === 'schedule' ? (language === 'ja' ? '週末スケジュール' : 'Weekend Schedule') : (language === 'ja' ? 'セッション結果' : 'Session Result')}
                   </span>
-                  <span className="text-xs text-gray-400">via Claude AI + Web Search</span>
+                  <span className="text-xs text-gray-400">via Gemini + Google Search</span>
                 </div>
                 {aiFetchType === 'schedule' && aiResult.sessions && (
                   <div className="p-5">
@@ -1229,6 +1237,26 @@ export default function F1JolpicaClient() {
                       ))}
                     </div>
                     {aiResult.notes && <p className="mt-4 text-xs text-gray-500 bg-gray-50 rounded p-3">{aiResult.notes}</p>}
+                  </div>
+                )}
+                {aiSources.length > 0 && (
+                  <div className="border-t border-gray-100 px-5 py-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">
+                      {language === 'ja' ? '参照元' : 'Sources'}
+                    </h4>
+                    <div className="space-y-1">
+                      {aiSources.map((source, index) => (
+                        <a
+                          key={`${source.uri}-${index}`}
+                          href={source.uri}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block text-xs text-red-600 hover:text-red-700 break-all"
+                        >
+                          {source.title}
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {aiResult.raw && (
