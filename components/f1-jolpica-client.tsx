@@ -8,7 +8,7 @@ import { jolpicaApi, type F1OfficialRace, type RaceResult } from "@/lib/jolpica-
 
 export default function F1JolpicaClient() {
   const { language, t } = useLanguage();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [raceSchedule, setRaceSchedule] = useState<F1OfficialRace[]>([]);
