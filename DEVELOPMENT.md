@@ -239,3 +239,56 @@ ClaudeやDevinなどの後続エージェントは、作業前に必ず以下の
 - `npx tsc --noEmit`: 成功。
 - `npm run build`: 成功。既存の `/calendar` Dynamic server usage 警告と、ローカルSupabaseキー不足による取得エラーは出るがビルドは完了。
 - ローカル `.env.local` の `GEMINI_API_KEY` は空のため、実際のGemini検索取得は未検証。
+
+---
+
+### 2026-06-02 Codex作業ログ: F1DBスケジュール取得をGoogle Calendar iCal優先に変更
+
+#### 実装内容
+- **`lib/calendar-service.ts` にF1スケジュール抽出機能を追加**
+  - 既存のFormula 1 public Google Calendar iCalからGP名・年に一致するセッションを抽出。
+  - Practice / Sprint Qualifying / Sprint / Qualifying / Race をセッション順に整列。
+  - iCalの開始・終了時刻から `TrackTime` と `JapanTime` を生成。
+  - JST日付も `japanDate` として返し、日付跨ぎ（例: Monaco Practice 2のJST 06/06 00:00）を表示できるようにした。
+
+- **`app/api/f1-ai-fetch/route.ts` のschedule取得をiCal優先に変更**
+  - `type: "schedule"` はまず `fetchF1CalendarSchedule()` を使用。
+  - iCalで一致するGPが見つかった場合は `provider: "google-calendar-ical"` として返却。
+  - iCalで見つからない場合のみ従来どおりGemini + Google Searchへフォールバック。
+
+- **`components/f1-jolpica-client.tsx` のAI取得タブを更新**
+  - 説明文を「スケジュールはiCal、結果はGemini検索」に変更。
+  - 取得元表示を `via Calendar iCal` / `via Gemini + Google Search` で切り替え。
+  - スケジュール表示を `Track: MM/DD HH:MM - HH:MM`, `Japan: MM/DD HH:MM - HH:MM` 形式に変更。
+
+#### 検証
+- ローカルAPI確認:
+  - Monaco 2026: `provider: "google-calendar-ical"` でPractice 1/2/3, Qualifying, Raceを取得。
+  - China 2026: Sprint weekendとしてPractice 1, Sprint Qualifying, Sprint, Qualifying, Raceを取得。
+- `npx tsc --noEmit`: 成功。
+- `npm run build`: 成功。既存の `/calendar` Dynamic server usage 警告と、ローカルSupabaseキー不足による取得エラーは出るがビルドは完了。
+
+---
+
+### 2026-06-04 Claude work log: Fix F1DB always showing loading spinner
+
+#### Problem
+- `loading` useState was initialized to `true`
+- This caused a full-screen spinner before any data loaded
+- The AI Fetch tab was never visible until Jolpica API responded (which it was failing to do)
+
+#### Fix
+- Changed `useState(true)` -> `useState(false)` in f1-jolpica-client.tsx
+- Now the full UI (including AI Fetch tab) renders immediately on page load
+- Jolpica data loads in the background after mount via useEffect
+
+#### Git / Deploy
+- Commit: e6a1781
+- Push: origin/main
+- Vercel Production: Ready in 2m
+- URL: https://rt18-formula1-official-site.vercel.app/f1-database
+
+#### Notes for next agent
+- GEMINI_API_KEY must be set in Vercel env vars for AI Fetch to work
+- Schedule fetch uses Google Calendar iCal first, falls back to Gemini + Google Search
+- Result fetch always uses Gemini + Google Search
