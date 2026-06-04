@@ -292,3 +292,22 @@ ClaudeやDevinなどの後続エージェントは、作業前に必ず以下の
 - GEMINI_API_KEY must be set in Vercel env vars for AI Fetch to work
 - Schedule fetch uses Google Calendar iCal first, falls back to Gemini + Google Search
 - Result fetch always uses Gemini + Google Search
+
+---
+
+### 2026-06-04 Claude: AI Fetch UI redesign (Base44 style + text copy + JPEG export)
+
+#### Changes
+- f1-jolpica-client.tsx: AI Fetch tab UI completely redesigned to match Base44 app output style
+  - Output card uses monospace font, white background
+  - Schedule: GP title, [Schedule] header, each session with TrackTime / JapanTime
+  - Result: GP title, session name, [Result] header, P1..P22 list, notes
+  - Footer: Racing car emoji + rt18_formula1
+  - Text Copy button: copies output card text to clipboard
+  - JPEG Save button: exports output card as JPEG via html2canvas (dynamic import)
+- html2canvas already present in package.json (no new install needed)
+
+#### Commit / Deploy
+- Commit: e6e07ce
+- Push: origin/main
+- Vercel: Ready in 1m
