@@ -1149,9 +1149,9 @@ export default function F1JolpicaClient() {
                 {language === 'ja' ? 'AI データ取得' : 'AI Data Fetch'}
               </h2>
               <p className="text-sm text-gray-500 mb-5">
-                {language === 'ja' ? 'GeminiがWeb検索でFormula1.comの公式データを取得します' : 'Gemini fetches official data from Formula1.com via web search'}
+                {language === 'ja' ? 'Gemini + Google検索でFormula1.com公式データを取得します' : 'Fetch official data from Formula1.com via Gemini + Google Search'}
               </p>
-              <div className="flex gap-3 mb-5">
+              <div className="flex gap-3 mb-5 flex-wrap">
                 <button onClick={() => setAiFetchType('schedule')}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${aiFetchType === 'schedule' ? 'bg-red-600 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
                   {language === 'ja' ? '週末スケジュール' : 'Weekend Schedule'}
@@ -1165,6 +1165,7 @@ export default function F1JolpicaClient() {
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Grand Prix Name</label>
                   <input type="text" value={aiGrandPrix} onChange={(e) => setAiGrandPrix(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') fetchAIData(); }}
                     placeholder="e.g. FORMULA 1 LOUIS VUITTON GRAND PRIX DE MONACO 2026"
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
                 </div>
@@ -1199,71 +1200,80 @@ export default function F1JolpicaClient() {
                 <strong>Error:</strong> {aiError}
               </div>
             )}
-            {aiResult && (
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-900 text-white px-4 py-3 flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    {aiFetchType === 'schedule' ? (language === 'ja' ? '週末スケジュール' : 'Weekend Schedule') : (language === 'ja' ? 'セッション結果' : 'Session Result')}
-                  </span>
-                  <span className="text-xs text-gray-400">via Gemini + Google Search</span>
+            {aiResult && !aiResult.raw && (
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                  <span className="text-sm font-medium text-gray-700">{language === 'ja' ? '出力結果' : 'Output'}</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        const el = document.getElementById('ai-output-text');
+                        if (el) navigator.clipboard.writeText(el.innerText);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                      {language === 'ja' ? 'テキストコピー' : 'Copy Text'}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const el = document.getElementById('ai-output-card');
+                        if (!el) return;
+                        const html2canvas = (await import('html2canvas')).default;
+                        const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+                        const link = document.createElement('a');
+                        link.download = (aiGrandPrix.replace(/\s+/g, '_') + '_' + (aiSession || 'SCHEDULE') + '.jpg');
+                        link.href = canvas.toDataURL('image/jpeg', 0.95);
+                        link.click();
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md hover:bg-gray-700 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      JPEG保存
+                    </button>
+                  </div>
                 </div>
-                {aiFetchType === 'schedule' && aiResult.sessions && (
-                  <div className="p-5">
-                    <h3 className="font-bold text-gray-900 mb-1">{aiResult.grandPrix || aiGrandPrix}</h3>
-                    {aiResult.isSprintWeekend && <span className="inline-block text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded mb-3">Sprint Weekend</span>}
-                    <div className="mt-3 space-y-3">
-                      {aiResult.sessions.map((s: any, i: number) => (
-                        <div key={i} className="flex items-start gap-4 text-sm border-b border-gray-100 pb-3">
-                          <div className="w-36 font-medium text-gray-900 shrink-0">{s.name}</div>
-                          <div className="text-gray-500">{s.date}</div>
-                          <div className="text-gray-700">
-                            <div>Track: {s.trackTime} <span className="text-xs text-gray-400">({s.trackTimezone})</span></div>
-                            <div>Japan: {s.japanTime} <span className="text-xs text-gray-400">(JST)</span></div>
+                <div id="ai-output-card" className="p-8 bg-white">
+                  <div id="ai-output-text" style={{fontFamily: 'monospace'}}>
+                    {aiFetchType === 'schedule' && aiResult.sessions && (
+                      <div>
+                        <p className="text-sm font-bold mb-5 tracking-widest">{aiResult.grandPrix || aiGrandPrix}</p>
+                        <p className="text-sm font-bold mb-4">{'【Schedule】'}</p>
+                        {aiResult.sessions.map((s: any, i: number) => (
+                          <div key={i} className="mb-5">
+                            <p className="text-sm mb-1">{s.name}</p>
+                            <p className="text-sm">{'TrackTime : '}{s.date}{' '}{s.trackTime}</p>
+                            <p className="text-sm">{'JapanTime : '}{s.japanDate ? s.japanDate + ' ' : ''}{s.japanTime}</p>
                           </div>
+                        ))}
+                        <div className="mt-2">
+                          <p className="text-sm">{'TrackTime : '}{aiResult.sessions[0]?.trackTimezone}</p>
+                          <p className="text-sm">{'JapanTime : UTC+9'}</p>
                         </div>
-                      ))}
+                      </div>
+                    )}
+                    {aiFetchType === 'result' && aiResult.results && (
+                      <div>
+                        <p className="text-sm font-bold mb-1 tracking-widest">{aiResult.grandPrix || aiGrandPrix}</p>
+                        <p className="text-sm font-bold mb-5">{aiSession}</p>
+                        <p className="text-sm font-bold mb-4">{'【Result】'}</p>
+                        {aiResult.results.map((r: string, i: number) => (
+                          <p key={i} className="text-sm mb-1.5">{r}</p>
+                        ))}
+                        {aiResult.notes && (
+                          <p className="text-xs text-gray-600 mt-5 leading-relaxed whitespace-pre-wrap">{aiResult.notes}</p>
+                        )}
+                      </div>
+                    )}
+                    <div className="mt-8 pt-4 border-t border-gray-200 flex items-center gap-2">
+                      <span className="text-base">{'🏎'}</span>
+                      <span className="text-sm font-bold tracking-wide">rt18_formula1</span>
                     </div>
                   </div>
-                )}
-                {aiFetchType === 'result' && aiResult.results && (
-                  <div className="p-5">
-                    <h3 className="font-bold text-gray-900 mb-1">{aiGrandPrix} — {aiSession}</h3>
-                    <div className="mt-3 space-y-1">
-                      {aiResult.results.map((r: string, i: number) => (
-                        <div key={i} className="flex items-center gap-3 text-sm py-1 border-b border-gray-50">
-                          <span className="w-8 text-xs font-bold text-red-600">{r.split(' ')[0]}</span>
-                          <span className="text-gray-900">{r.split(' ').slice(1).join(' ')}</span>
-                        </div>
-                      ))}
-                    </div>
-                    {aiResult.notes && <p className="mt-4 text-xs text-gray-500 bg-gray-50 rounded p-3">{aiResult.notes}</p>}
-                  </div>
-                )}
-                {aiSources.length > 0 && (
-                  <div className="border-t border-gray-100 px-5 py-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">
-                      {language === 'ja' ? '参照元' : 'Sources'}
-                    </h4>
-                    <div className="space-y-1">
-                      {aiSources.map((source, index) => (
-                        <a
-                          key={`${source.uri}-${index}`}
-                          href={source.uri}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block text-xs text-red-600 hover:text-red-700 break-all"
-                        >
-                          {source.title}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {aiResult.raw && (
-                  <div className="p-5">
-                    <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono">{aiResult.raw}</pre>
-                  </div>
-                )}
+                </div>
+              </div>
+            )}
+            {aiResult && aiResult.raw && (
+              <div className="bg-white border border-gray-200 rounded-lg p-5">
+                <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono">{aiResult.raw}</pre>
               </div>
             )}
           </div>
