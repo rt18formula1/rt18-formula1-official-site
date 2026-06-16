@@ -822,6 +822,23 @@ export async function GET(request: Request) {
           _fallback: false
         });
 
+      case 'round':
+        if (!targetRound) {
+          return NextResponse.json(
+            { error: 'Round parameter is required for round data' },
+            { status: 400 }
+          );
+        }
+        const roundResponse = await fetchFromJolpica(`/${targetYear}/${targetRound}/results.json?limit=100`);
+        return NextResponse.json({
+          season: targetYear,
+          round: targetRound,
+          type: 'round',
+          data: roundResponse,
+          _scraped: true,
+          _fallback: false
+        });
+
       case 'schedule':
       default:
         // Jolpica APIからデータ取得

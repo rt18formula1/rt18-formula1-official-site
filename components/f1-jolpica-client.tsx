@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useLanguage } from "@/components/providers/language-provider";
 import { jolpicaApi, type F1OfficialRace, type RaceResult } from "@/lib/jolpica-api";
+import OpenF1RoundModal from "@/components/f1-database-round-modal";
 
 export default function F1JolpicaClient() {
   const { language, t } = useLanguage();
@@ -44,6 +45,9 @@ export default function F1JolpicaClient() {
   // セッションデータ用の状態
   const [sessionData, setSessionData] = useState<any>(null);
   const [sessionLoading, setSessionLoading] = useState(false);
+
+  // Round modal
+  const [modalRace, setModalRace] = useState<F1OfficialRace | null>(null);
 
   // 日付フォーマット関数
   const formatDate = (dateString: string) => {
@@ -435,7 +439,7 @@ export default function F1JolpicaClient() {
                 return (
                   <div
                     key={`${race.round}-${race.name}`}
-                    onClick={() => setSelectedRace(race)}
+                    onClick={() => setModalRace(race)}
                     className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
                   >
                     <div className="flex items-start justify-between mb-2">
@@ -1280,6 +1284,14 @@ export default function F1JolpicaClient() {
         )}
       </main>
       <SiteFooter />
+      {modalRace && (
+        <OpenF1RoundModal
+          year={selectedYear}
+          round={modalRace.round}
+          raceName={modalRace.name}
+          onClose={() => setModalRace(null)}
+        />
+      )}
     </div>
   );
 }
