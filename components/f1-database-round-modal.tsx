@@ -63,36 +63,37 @@ export default function OpenF1RoundModal({ year, round, raceName, onClose }: Ope
     const run = async () => {
       try {
         setLoading(true);
-        const resolvedMeeting = await openf1Api.getMeetingByRound(year, round);
+        const meetings = await getMeetings(year);
+        const resolvedMeeting = meetings.find((m) => String(m.meeting_code) === String(round)) || null;
         if (cancelled || !resolvedMeeting) return;
         setMeeting(resolvedMeeting);
 
-        const sessionList = await openf1Api.getSessions(resolvedMeeting.meeting_key);
+        const sessionList = await getSessions(resolvedMeeting.meeting_key);
         if (cancelled) return;
         setSessions(sessionList);
 
         const keyByTab: Record<SessionTab, number | null> = { qualifying: null, sprint: null, race: null };
         sessionList.forEach((item) => {
           const name = item.session_name.toLowerCase();
-          if (name.includes("qualifying") && name.includes("sprint")) keyByTab.sprint = item.session_key;
-          else if (name.includes("qualifying")) keyByTab.qualifying = item.session_key;
-          else if (name.includes("sprint")) keyByTab.sprint = item.session_key;
-          else if (name.includes("race")) keyByTab.race = item.session_key;
+          if (name.includes('qualifying') && name.includes('sprint')) keyByTab.sprint = item.session_key;
+          else if (name.includes('qualifying')) keyByTab.qualifying = item.session_key;
+          else if (name.includes('sprint')) keyByTab.sprint = item.session_key;
+          else if (name.includes('race')) keyByTab.race = item.session_key;
         });
 
         const [qualifyingResults, sprintResults, raceResults, qualifyingDrivers, sprintDrivers, raceDrivers] = await Promise.all([
-          keyByTab.qualifying ? openf1Api.getResults(keyByTab.qualifying).catch(() => []) : Promise.resolve([]),
-          keyByTab.sprint ? openf1Api.getResults(keyByTab.sprint).catch(() => []) : Promise.resolve([]),
-          keyByTab.race ? openf1Api.getResults(keyByTab.race).catch(() => []) : Promise.resolve([]),
-          keyByTab.qualifying ? openf1Api.getDrivers(keyByTab.qualifying).catch(() => []) : Promise.resolve([]),
-          keyByTab.sprint ? openf1Api.getDrivers(keyByTab.sprint).catch(() => []) : Promise.resolve([]),
-          keyByTab.race ? openf1Api.getDrivers(keyByTab.race).catch(() => []) : Promise.resolve([]),
+          keyByTab.qualifying ? getResultRows(keyByTab.qualifying).catch(() => []) : Promise.resolve([]),
+          keyByTab.sprint ? getResultRows(keyByTab.sprint).catch(() => []) : Promise.resolve([]),
+          keyByTab.race ? getResultRows(keyByTab.race).catch(() => []) : Promise.resolve([]),
+          keyByTab.qualifying ? getDriverRows(keyByTab.qualifying).catch(() => []) : Promise.resolve([]),
+          keyByTab.sprint ? getDriverRows(keyByTab.sprint).catch(() => []) : Promise.resolve([]),
+          keyByTab.race ? getDriverRows(keyByTab.race).catch(() => []) : Promise.resolve([]),
         ]);
         if (cancelled) return;
         setResults({ qualifying: qualifyingResults, sprint: sprintResults, race: raceResults });
         setDrivers({ qualifying: qualifyingDrivers, sprint: sprintDrivers, race: raceDrivers });
       } catch (error) {
-        console.error("Failed to fetch OpenF1 data:", error);
+        console.error('Failed to fetch OpenF1 data:', error);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -115,7 +116,7 @@ export default function OpenF1RoundModal({ year, round, raceName, onClose }: Ope
       .forEach((s) => {
         lines.push(`${s.session_name}: ${toJapanTime(s.date_start, s.gmt_offset || meeting?.gmt_offset)}`);
       });
-    SESSION_TABS.forEach((tab) => {
+    SESSION_TABS.forEach(({ key: tab }) => {
       const sessionResults = results[tab];
       const sessionDrivers = drivers[tab];
       const driverMap = new Map(sessionDrivers.map((d) => [d.driver_number, d]));
@@ -137,7 +138,7 @@ export default function OpenF1RoundModal({ year, round, raceName, onClose }: Ope
       .map((s) => `<tr><td>${esc(s.session_name)}</td><td>${esc(toJapanTime(s.date_start, s.gmt_offset || meeting?.gmt_offset))}</td></tr>`)
       .join("");
 
-    const resultTables = SESSION_TABS.map((tab) => {
+    const resultTables = SESSION_TABS.map(({ key: tab }) => {
       const tabResults = results[tab];
       const tabDrivers = drivers[tab];
       const driverMap = new Map(tabDrivers.map((d) => [d.driver_number, d]));
