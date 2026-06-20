@@ -2,16 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/components/providers/language-provider";
-import {
-  getMeetings,
-  getSessions,
-  getResultRows,
-  getDriverRows,
-  type OpenF1MeetingRow,
-  type OpenF1SessionRow,
-  type OpenF1ResultRow,
-  type OpenF1DriverRow,
-} from "@/lib/openf1-api";
+import { openf1Api, type OpenF1Meeting, type OpenF1Session, type OpenF1ResultRow, type OpenF1Driver } from "@/lib/openf1-api";
 
 type SessionTab = "qualifying" | "sprint" | "race";
 
@@ -51,14 +42,14 @@ function escapeHtml(s: string) {
 
 export default function OpenF1RoundModal({ year, round, raceName, onClose }: OpenF1RoundModalProps) {
   const { language } = useLanguage();
-  const [meeting, setMeeting] = useState<OpenF1MeetingRow | null>(null);
-  const [sessions, setSessions] = useState<OpenF1SessionRow[]>([]);
+  const [meeting, setMeeting] = useState<OpenF1Meeting | null>(null);
+  const [sessions, setSessions] = useState<OpenF1Session[]>([]);
   const [results, setResults] = useState<Record<SessionTab, OpenF1ResultRow[]>>({
     qualifying: [],
     sprint: [],
     race: [],
   });
-  const [drivers, setDrivers] = useState<Record<SessionTab, OpenF1DriverRow[]>>({
+  const [drivers, setDrivers] = useState<Record<SessionTab, OpenF1Driver[]>>({
     qualifying: [],
     sprint: [],
     race: [],
@@ -73,10 +64,9 @@ export default function OpenF1RoundModal({ year, round, raceName, onClose }: Ope
       try {
         setLoading(true);
         const meetings = await getMeetings(year);
-        if (cancelled) return;
-        const resolvedMeeting = meetings[Math.max(0, Math.min(round - 1, meetings.length - 1))] || meetings[0] || null;
+        const resolvedMeeting = meetings.find((m) => String(m.meeting_code) === String(round)) || null;
+        if (cancelled || !resolvedMeeting) return;
         setMeeting(resolvedMeeting);
-        if (!resolvedMeeting) return;
 
         const sessionList = await getSessions(resolvedMeeting.meeting_key);
         if (cancelled) return;
@@ -85,10 +75,10 @@ export default function OpenF1RoundModal({ year, round, raceName, onClose }: Ope
         const keyByTab: Record<SessionTab, number | null> = { qualifying: null, sprint: null, race: null };
         sessionList.forEach((item) => {
           const name = item.session_name.toLowerCase();
-          if (name.includes("qualifying") && name.includes("sprint")) keyByTab.sprint = item.session_key;
-          else if (name.includes("qualifying")) keyByTab.qualifying = item.session_key;
-          else if (name.includes("sprint")) keyByTab.sprint = item.session_key;
-          else if (name.includes("race")) keyByTab.race = item.session_key;
+          if (name.includes('qualifying') && name.includes('sprint')) keyByTab.sprint = item.session_key;
+          else if (name.includes('qualifying')) keyByTab.qualifying = item.session_key;
+          else if (name.includes('sprint')) keyByTab.sprint = item.session_key;
+          else if (name.includes('race')) keyByTab.race = item.session_key;
         });
 
         const [qualifyingResults, sprintResults, raceResults, qualifyingDrivers, sprintDrivers, raceDrivers] = await Promise.all([
@@ -103,7 +93,7 @@ export default function OpenF1RoundModal({ year, round, raceName, onClose }: Ope
         setResults({ qualifying: qualifyingResults, sprint: sprintResults, race: raceResults });
         setDrivers({ qualifying: qualifyingDrivers, sprint: sprintDrivers, race: raceDrivers });
       } catch (error) {
-        console.error("Failed to fetch OpenF1 data:", error);
+        console.error('Failed to fetch OpenF1 data:', error);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -156,7 +146,7 @@ export default function OpenF1RoundModal({ year, round, raceName, onClose }: Ope
         .map((r) => {
           const driver = driverMap.get(r.driver_number);
           const name = driver?.broadcast_name || r.full_name || `#${r.driver_number}`;
-          return `<tr><td>${r.position}</td><td>${esc(name)} (${esc(driver?.name_acronym || "-")})</td><td>${esc(r.team_name || "")}</td></tr>`;
+          return `<tr><td>${r.position}</td><td>${esc(name)} (${esc(driver?.name_acronym || "-")})</td><td>${esc(r.team_name)}</td></tr>`;
         })
         .join("");
       const heading = SESSION_TABS.find((item) => item.key === tab)?.label || tab;
@@ -253,7 +243,7 @@ export default function OpenF1RoundModal({ year, round, raceName, onClose }: Ope
                         <tr key={`${r.driver_number}-${r.position}`} className="border-b last:border-0">
                           <td className="px-2 py-1">{r.position}</td>
                           <td className="px-2 py-1">
-                            {driver?.broadcast_name || r.full_name} <span className="text-xs text-gray-500">({String(driver?.name_acronym || "-")})</span>
+                            {driver?.broadcast_name || r.full_name} <span className="text-xs text-gray-500">({driver?.name_acronym || "-"})</span>
                           </td>
                           <td className="px-2 py-1">{r.team_name}</td>
                         </tr>
@@ -274,7 +264,6 @@ export default function OpenF1RoundModal({ year, round, raceName, onClose }: Ope
                 onClick={() => {
                   navigator.clipboard?.writeText(textPayload);
                   setCopied("text");
-                  setTimeout(() => setCopied(null), 1200);
                 }}
                 className="px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
               >
@@ -284,7 +273,6 @@ export default function OpenF1RoundModal({ year, round, raceName, onClose }: Ope
                 onClick={() => {
                   navigator.clipboard?.writeText(htmlPayload);
                   setCopied("html");
-                  setTimeout(() => setCopied(null), 1200);
                 }}
                 className="px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
               >
