@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "../../../../lib/stripe";
 import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { createClient } from "../../../../lib/supabaseServer";
 
 function cleanText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -12,6 +13,12 @@ export async function POST(request: Request) {
     const { items, userId, shipping } = body;
 
     if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user || user.id !== userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     if (!items || items.length === 0) {

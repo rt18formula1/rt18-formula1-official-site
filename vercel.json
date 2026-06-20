@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/f1-sns-sync",
+      "schedule": "*/30 * * * *"
+    }
+  ]
+}

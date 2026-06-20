@@ -1,9 +1,20 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "./supabaseAdmin";
 import type { DbNews, DbPortfolio } from "./supabase-queries";
 
+async function verifyAdmin() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("rt18_admin")?.value;
+  if (sessionCookie !== "1") {
+    throw new Error("Unauthorized");
+  }
+}
+
+
 export async function updateNewsTitle(id: string, title_en: string, title_ja: string) {
+  await verifyAdmin();
   const { data, error } = await supabaseAdmin
     .from("news")
     .update({ title_en, title_ja })
@@ -16,6 +27,7 @@ export async function updateNewsTitle(id: string, title_en: string, title_ja: st
 }
 
 export async function updatePortfolioTitle(id: string, title_en: string, title_ja: string) {
+  await verifyAdmin();
   const { data, error } = await supabaseAdmin
     .from("portfolio")
     .update({ title_en, title_ja })
@@ -28,6 +40,7 @@ export async function updatePortfolioTitle(id: string, title_en: string, title_j
 }
 
 export async function updateNewsContent(id: string, body_en: string, body_ja: string) {
+  await verifyAdmin();
   const { data, error } = await supabaseAdmin
     .from("news")
     .update({ body_en, body_ja })
@@ -40,6 +53,7 @@ export async function updateNewsContent(id: string, body_en: string, body_ja: st
 }
 
 export async function updatePortfolioContent(id: string, body_en: string, body_ja: string) {
+  await verifyAdmin();
   const { data, error } = await supabaseAdmin
     .from("portfolio")
     .update({ body_en, body_ja })

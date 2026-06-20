@@ -5,6 +5,8 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useLanguage } from "@/components/providers/language-provider";
 import { jolpicaApi, type F1OfficialRace, type RaceResult } from "@/lib/jolpica-api";
+import F1SnsTemplates from "@/components/f1-sns-templates";
+import OpenF1RoundModal from "@/components/f1-database-round-modal";
 
 export default function F1JolpicaClient() {
   const { language, t } = useLanguage();
@@ -14,10 +16,11 @@ export default function F1JolpicaClient() {
   const [raceSchedule, setRaceSchedule] = useState<F1OfficialRace[]>([]);
   const [selectedRace, setSelectedRace] = useState<F1OfficialRace | null>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [activeTab, setActiveTab] = useState<'schedule' | 'details' | 'standings' | 'alldata' | 'aifetch'>('schedule');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'details' | 'standings' | 'alldata' | 'sns'>('schedule');
   const [standingsTab, setStandingsTab] = useState<'drivers' | 'constructors'>('drivers');
   const [allDataTab, setAllDataTab] = useState<'qualifying' | 'circuits' | 'drivers' | 'constructors' | 'laps' | 'pitstops'>('qualifying');
   const [raceSessionTab, setRaceSessionTab] = useState<'sprint' | 'qualifying' | 'race'>('race');
+  const [modalRace, setModalRace] = useState<F1OfficialRace | null>(null);
   const [apiStatus, setApiStatus] = useState<{ isAvailable: boolean; responseTime?: number; error?: string } | null>(null);
   const [driverStandings, setDriverStandings] = useState<any>(null);
   const [constructorStandings, setConstructorStandings] = useState<any>(null);
@@ -29,15 +32,6 @@ export default function F1JolpicaClient() {
   const [driversData, setDriversData] = useState<any>(null);
   const [constructorsData, setConstructorsData] = useState<any>(null);
   const [lapsData, setLapsData] = useState<any>(null);
-  // AI取得機能の状態
-  const [aiGrandPrix, setAiGrandPrix] = useState('');
-  const [aiYear, setAiYear] = useState(new Date().getFullYear());
-  const [aiSession, setAiSession] = useState('RACE');
-  const [aiFetchType, setAiFetchType] = useState<'schedule' | 'result'>('schedule');
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiResult, setAiResult] = useState<any>(null);
-  const [aiSources, setAiSources] = useState<Array<{ title: string; uri: string }>>([]);
-  const [aiError, setAiError] = useState<string | null>(null);
   const [pitstopsData, setPitstopsData] = useState<any>(null);
   const [allDataLoading, setAllDataLoading] = useState(false);
   
@@ -150,32 +144,6 @@ export default function F1JolpicaClient() {
   };
 
 
-  // AI取得関数
-  const fetchAIData = async () => {
-    if (!aiGrandPrix.trim()) return;
-    setAiLoading(true);
-    setAiError(null);
-    setAiResult(null);
-    setAiSources([]);
-    try {
-      const res = await fetch('/api/f1-ai-fetch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: aiFetchType, grandPrix: aiGrandPrix, year: aiYear, session: aiSession }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        const detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail || '');
-        setAiError([data.error || 'Unknown error', detail].filter(Boolean).join(' - '));
-      }
-      else {
-        setAiResult(data.data);
-        setAiSources(Array.isArray(data.sources) ? data.sources : []);
-      }
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : 'Fetch failed');
-    } finally { setAiLoading(false); }
-  };
   // タブがstandingsに切り替わったときにスタンディングスを取得
   useEffect(() => {
     if (activeTab === 'standings') {
@@ -401,12 +369,12 @@ export default function F1JolpicaClient() {
               {language === 'ja' ? '全データ' : 'All Data'}
             </button>
             <button
-              onClick={() => { setActiveTab('aifetch'); setSelectedRace(null); }}
+              onClick={() => { setActiveTab('sns'); setSelectedRace(null); }}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'aifetch' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === 'sns' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              {language === 'ja' ? 'AI取得' : 'AI Fetch'}
+              {language === 'ja' ? 'インスタ定型文' : 'Instagram'}
             </button>
             {selectedRace && (
               <button
@@ -435,7 +403,7 @@ export default function F1JolpicaClient() {
                 return (
                   <div
                     key={`${race.round}-${race.name}`}
-                    onClick={() => setSelectedRace(race)}
+                    onClick={() => setModalRace(race)}
                     className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
                   >
                     <div className="flex items-start justify-between mb-2">
@@ -1141,145 +1109,20 @@ export default function F1JolpicaClient() {
             )}
           </div>
         )}
-        {/* AI取得タブ */}
-        {activeTab === 'aifetch' && (
-          <div className="space-y-6">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-2">
-                {language === 'ja' ? 'AI データ取得' : 'AI Data Fetch'}
-              </h2>
-              <p className="text-sm text-gray-500 mb-5">
-                {language === 'ja' ? 'Gemini + Google検索でFormula1.com公式データを取得します' : 'Fetch official data from Formula1.com via Gemini + Google Search'}
-              </p>
-              <div className="flex gap-3 mb-5 flex-wrap">
-                <button onClick={() => setAiFetchType('schedule')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${aiFetchType === 'schedule' ? 'bg-red-600 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
-                  {language === 'ja' ? '週末スケジュール' : 'Weekend Schedule'}
-                </button>
-                <button onClick={() => setAiFetchType('result')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${aiFetchType === 'result' ? 'bg-red-600 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
-                  {language === 'ja' ? 'セッション結果' : 'Session Result'}
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Grand Prix Name</label>
-                  <input type="text" value={aiGrandPrix} onChange={(e) => setAiGrandPrix(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') fetchAIData(); }}
-                    placeholder="e.g. FORMULA 1 LOUIS VUITTON GRAND PRIX DE MONACO 2026"
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Year</label>
-                  <input type="number" value={aiYear} onChange={(e) => setAiYear(Number(e.target.value))}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-                </div>
-              </div>
-              {aiFetchType === 'result' && (
-                <div className="mb-4">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Session</label>
-                  <select value={aiSession} onChange={(e) => setAiSession(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                    <option value="RACE">Race</option>
-                    <option value="QUALIFYING">Qualifying</option>
-                    <option value="SPRINT">Sprint</option>
-                    <option value="SPRINT QUALIFYING">Sprint Qualifying</option>
-                    <option value="PRACTICE 1">Practice 1</option>
-                    <option value="PRACTICE 2">Practice 2</option>
-                    <option value="PRACTICE 3">Practice 3</option>
-                  </select>
-                </div>
-              )}
-              <button onClick={fetchAIData} disabled={aiLoading || !aiGrandPrix.trim()}
-                className="w-full md:w-auto px-6 py-2.5 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                {aiLoading ? (language === 'ja' ? '取得中...' : 'Fetching...') : (language === 'ja' ? 'AIで取得' : 'Fetch with AI')}
-              </button>
-            </div>
-            {aiError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
-                <strong>Error:</strong> {aiError}
-              </div>
-            )}
-            {aiResult && !aiResult.raw && (
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                  <span className="text-sm font-medium text-gray-700">{language === 'ja' ? '出力結果' : 'Output'}</span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        const el = document.getElementById('ai-output-text');
-                        if (el) navigator.clipboard.writeText(el.innerText);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                      {language === 'ja' ? 'テキストコピー' : 'Copy Text'}
-                    </button>
-                    <button
-                      onClick={async () => {
-                        const el = document.getElementById('ai-output-card');
-                        if (!el) return;
-                        const html2canvas = (await import('html2canvas')).default;
-                        const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
-                        const link = document.createElement('a');
-                        link.download = (aiGrandPrix.replace(/\s+/g, '_') + '_' + (aiSession || 'SCHEDULE') + '.jpg');
-                        link.href = canvas.toDataURL('image/jpeg', 0.95);
-                        link.click();
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gray-900 text-white rounded-md hover:bg-gray-700 transition-colors">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                      JPEG保存
-                    </button>
-                  </div>
-                </div>
-                <div id="ai-output-card" className="p-8 bg-white">
-                  <div id="ai-output-text" style={{fontFamily: 'monospace'}}>
-                    {aiFetchType === 'schedule' && aiResult.sessions && (
-                      <div>
-                        <p className="text-sm font-bold mb-5 tracking-widest">{aiResult.grandPrix || aiGrandPrix}</p>
-                        <p className="text-sm font-bold mb-4">{'【Schedule】'}</p>
-                        {aiResult.sessions.map((s: any, i: number) => (
-                          <div key={i} className="mb-5">
-                            <p className="text-sm mb-1">{s.name}</p>
-                            <p className="text-sm">{'TrackTime : '}{s.date}{' '}{s.trackTime}</p>
-                            <p className="text-sm">{'JapanTime : '}{s.japanDate ? s.japanDate + ' ' : ''}{s.japanTime}</p>
-                          </div>
-                        ))}
-                        <div className="mt-2">
-                          <p className="text-sm">{'TrackTime : '}{aiResult.sessions[0]?.trackTimezone}</p>
-                          <p className="text-sm">{'JapanTime : UTC+9'}</p>
-                        </div>
-                      </div>
-                    )}
-                    {aiFetchType === 'result' && aiResult.results && (
-                      <div>
-                        <p className="text-sm font-bold mb-1 tracking-widest">{aiResult.grandPrix || aiGrandPrix}</p>
-                        <p className="text-sm font-bold mb-5">{aiSession}</p>
-                        <p className="text-sm font-bold mb-4">{'【Result】'}</p>
-                        {aiResult.results.map((r: string, i: number) => (
-                          <p key={i} className="text-sm mb-1.5">{r}</p>
-                        ))}
-                        {aiResult.notes && (
-                          <p className="text-xs text-gray-600 mt-5 leading-relaxed whitespace-pre-wrap">{aiResult.notes}</p>
-                        )}
-                      </div>
-                    )}
-                    <div className="mt-8 pt-4 border-t border-gray-200 flex items-center gap-2">
-                      <span className="text-base">{'🏎'}</span>
-                      <span className="text-sm font-bold tracking-wide">rt18_formula1</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {aiResult && aiResult.raw && (
-              <div className="bg-white border border-gray-200 rounded-lg p-5">
-                <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono">{aiResult.raw}</pre>
-              </div>
-            )}
-          </div>
+        {/* インスタ定型文タブ（Base44互換） */}
+        {activeTab === 'sns' && (
+          <F1SnsTemplates year={selectedYear} races={raceSchedule} />
         )}
       </main>
       <SiteFooter />
+      {modalRace && (
+        <OpenF1RoundModal
+          year={selectedYear}
+          round={modalRace.round}
+          raceName={modalRace.name}
+          onClose={() => setModalRace(null)}
+        />
+      )}
     </div>
   );
 }

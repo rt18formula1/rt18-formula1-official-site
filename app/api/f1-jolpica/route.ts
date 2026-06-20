@@ -77,6 +77,8 @@ interface JolpicaRace {
   FirstPractice?: { date: string; time: string };
   SecondPractice?: { date: string; time: string };
   ThirdPractice?: { date: string; time: string };
+  SprintQualifying?: { date: string; time: string };
+  Sprint?: { date: string; time: string };
   Qualifying?: { date: string; time: string };
 }
 
@@ -113,6 +115,18 @@ interface F1OfficialRace {
   date: string;
   url: string;
   results?: RaceResult[];
+  sessions?: {
+    fp1?: { date: string; time: string };
+    fp2?: { date: string; time: string };
+    fp3?: { date: string; time: string };
+    sprintQualifying?: { date: string; time: string };
+    sprint?: { date: string; time: string };
+    qualifying?: { date: string; time: string };
+    race?: { date: string; time: string };
+    circuitTimezone?: string;
+    circuitLat?: string;
+    circuitLng?: string;
+  };
 }
 
 interface F1OfficialData {
@@ -157,6 +171,19 @@ function convertJolpicaData(jolpicaData: JolpicaResponse, targetYear: number): F
       date: race.date,
       url: race.url
     };
+
+    // セッション時刻を保持
+    const sessions: F1OfficialRace['sessions'] = {};
+    if (race.FirstPractice) sessions.fp1 = race.FirstPractice;
+    if (race.SecondPractice) sessions.fp2 = race.SecondPractice;
+    if (race.ThirdPractice) sessions.fp3 = race.ThirdPractice;
+    if (race.SprintQualifying) sessions.sprintQualifying = race.SprintQualifying;
+    if (race.Sprint) sessions.sprint = race.Sprint;
+    if (race.Qualifying) sessions.qualifying = race.Qualifying;
+    if (race.date) sessions.race = { date: race.date, time: race.time || '00:00:00Z' };
+    sessions.circuitLat = race.Circuit.Location.lat;
+    sessions.circuitLng = race.Circuit.Location.long;
+    if (Object.keys(sessions).length > 0) convertedRace.sessions = sessions;
 
     // レース結果がある場合のみ変換
     if (race.Results && race.Results.length > 0) {

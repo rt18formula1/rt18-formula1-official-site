@@ -1,48 +1,66 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "./supabaseAdmin";
 import { stripe } from "./stripe";
 import type { DbNews, DbPortfolio, DbAlbum, DbEvent } from "./supabase-queries";
 
+async function verifyAdmin() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("rt18_admin")?.value;
+  if (sessionCookie !== "1") {
+    throw new Error("Unauthorized");
+  }
+}
+
+
 export async function createNewsAction(news: Partial<DbNews>) {
+  await verifyAdmin();
   const { data, error } = await supabaseAdmin.from("news").insert(news).select().single();
   if (error) throw error;
   return data as DbNews;
 }
 
 export async function createPortfolioAction(portfolio: Partial<DbPortfolio>) {
+  await verifyAdmin();
   const { data, error } = await supabaseAdmin.from("portfolio").insert(portfolio).select().single();
   if (error) throw error;
   return data as DbPortfolio;
 }
 
 export async function createAlbumAction(album: Partial<DbAlbum>) {
+  await verifyAdmin();
   const { data, error } = await supabaseAdmin.from("albums").insert(album).select().single();
   if (error) throw error;
   return data as DbAlbum;
 }
 
 export async function addNewsToAlbumAction(album_id: string, news_id: string) {
+  await verifyAdmin();
   const { error } = await supabaseAdmin.from("news_albums").insert({ album_id, news_id });
   if (error) throw error;
 }
 
 export async function addPortfolioToAlbumAction(album_id: string, portfolio_id: string) {
+  await verifyAdmin();
   const { error } = await supabaseAdmin.from("portfolio_albums").insert({ album_id, portfolio_id });
   if (error) throw error;
 }
 
 export async function deleteNewsAction(id: string) {
+  await verifyAdmin();
   const { error } = await supabaseAdmin.from("news").delete().eq("id", id);
   if (error) throw error;
 }
 
 export async function deletePortfolioAction(id: string) {
+  await verifyAdmin();
   const { error } = await supabaseAdmin.from("portfolio").delete().eq("id", id);
   if (error) throw error;
 }
 
 export async function deleteAlbumAction(id: string) {
+  await verifyAdmin();
   const { error } = await supabaseAdmin.from("albums").delete().eq("id", id);
   if (error) throw error;
 }
@@ -52,12 +70,14 @@ export async function deleteAlbumAction(id: string) {
 // ----------------------------------------------------------------------
 
 export async function createEventAction(event: Partial<DbEvent>) {
+  await verifyAdmin();
   const { data, error } = await supabaseAdmin.from("events").insert(event).select().single();
   if (error) throw error;
   return data as DbEvent;
 }
 
 export async function deleteEventAction(id: string) {
+  await verifyAdmin();
   const { error } = await supabaseAdmin.from("events").delete().eq("id", id);
   if (error) throw error;
   return { success: true };
@@ -67,18 +87,21 @@ export async function deleteEventAction(id: string) {
 // ----------------------------------------------------------------------
 
 export async function createProductAction(product: any) {
+  await verifyAdmin();
   const { data, error } = await supabaseAdmin.from("products").insert(product).select().single();
   if (error) throw error;
   return data;
 }
 
 export async function updateProductAction(id: string, product: any) {
+  await verifyAdmin();
   const { data, error } = await supabaseAdmin.from("products").update(product).eq("id", id).select().single();
   if (error) throw error;
   return data;
 }
 
 export async function deleteProductAction(id: string) {
+  await verifyAdmin();
   const { error } = await supabaseAdmin.from("products").delete().eq("id", id);
   if (error) throw error;
   return { success: true };
@@ -89,6 +112,7 @@ export async function deleteProductAction(id: string) {
 // ----------------------------------------------------------------------
 
 export async function updateCommissionStatusAction(id: string, status: string) {
+  await verifyAdmin();
   const { data, error } = await supabaseAdmin.from("commissions").update({ status }).eq("id", id).select().single();
   if (error) throw error;
   return data;
@@ -99,6 +123,7 @@ export async function updateCommissionStatusAction(id: string, status: string) {
 // ----------------------------------------------------------------------
 
 export async function syncProductToStripeAction(productId: string) {
+  await verifyAdmin();
   // 1. Get product from DB
   const { data: product, error } = await supabaseAdmin.from("products").select("*").eq("id", productId).single();
   if (error || !product) throw new Error("Product not found");

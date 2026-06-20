@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
 
 function escapeHtml(value: unknown) {
@@ -23,6 +24,12 @@ function addressHtml(order: any, fallbackName: string) {
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("rt18_admin")?.value;
+    if (sessionCookie !== "1") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { orderId, trackingNumber } = await request.json();
     if (!orderId || !trackingNumber) {
       return NextResponse.json({ error: "Missing orderId or trackingNumber" }, { status: 400 });
