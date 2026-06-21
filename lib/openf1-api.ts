@@ -85,3 +85,39 @@ export class OpenF1Client {
 }
 
 export const openf1Api = new OpenF1Client();
+
+export interface OpenF1MeetingRow {
+  meeting_key: number;
+  meeting_name: string;
+  meeting_code: string;
+  year: number;
+  date_start: string;
+  country_name: string;
+  location: string;
+  gmt_offset: string;
+}
+
+export interface OpenF1SessionRow {
+  session_key: number;
+  session_name: string;
+  date_start: string;
+  gmt_offset: string;
+  is_cancelled: boolean;
+  meeting_key: number;
+}
+
+export async function getMeetings(year: number): Promise<OpenF1Meeting[]> {
+  return openf1Api.getMeetings(year);
+}
+
+export async function getSessions(meetingKey: number): Promise<OpenF1Session[]> {
+  return openf1Api.getSessions(meetingKey);
+}
+
+export async function getResultRows(sessionKey: number): Promise<OpenF1ResultRow[]> {
+  return openf1Api.getResults(sessionKey);
+}
+
+export async function getDriverRows(sessionKey: number): Promise<OpenF1Driver[]> {
+  return openf1Api.getDrivers(sessionKey);
+}
