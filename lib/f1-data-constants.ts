@@ -16,29 +16,7 @@ export interface F1CalendarRace {
   sprintStartLocal?: string;
   cancelled?: boolean;
   results?: any[];
-}
-
-export interface TriggerType {
-  id: string;
-  label: string;
-  sessionName: string;
-  sprintOnly?: boolean;
-}
-
-export const F1_2026_CALENDAR: F1CalendarRace[] = [
-  {
-    round: 1,
-    country: "Australia",
-    officialName: "FORMULA 1 QATAR AIRWAYS AUSTRALIAN GRAND PRIX 2026",
-    circuit: "Albert Park Circuit",
-    city: "Melbourne",
-    dates: "06 - 08 Mar",
-    raceDate: "Mar 8",
-    hasSprint: false,
-    slug: "australia",
-    utcOffset: 11, // AEDT
-    raceStartLocal: "15:00",
-    qualiStartLocal: "16:00",
+    meetingId: 1279,
   },
   {
     round: 2,
@@ -54,20 +32,7 @@ export const F1_2026_CALENDAR: F1CalendarRace[] = [
     raceStartLocal: "15:00",
     qualiStartLocal: "15:00",
     sprintStartLocal: "11:00",
-  },
-  {
-    round: 3,
-    country: "Japan",
-    officialName: "FORMULA 1 ARAMCO JAPANESE GRAND PRIX 2026",
-    circuit: "Suzuka International Racing Course",
-    city: "Suzuka",
-    dates: "27 - 29 Mar",
-    raceDate: "Mar 29",
-    hasSprint: false,
-    slug: "japan",
-    utcOffset: 9,
-    raceStartLocal: "14:00",
-    qualiStartLocal: "15:00",
+    meetingId: 1281,
   },
   {
     round: 4,
@@ -113,21 +78,7 @@ export const F1_2026_CALENDAR: F1CalendarRace[] = [
     raceStartLocal: "16:00",
     qualiStartLocal: "16:00",
     sprintStartLocal: "12:00",
-  },
-  {
-    round: 7,
-    country: "Canada",
-    officialName: "FORMULA 1 LENOVO GRAND PRIX DU CANADA 2026",
-    circuit: "Circuit Gilles-Villeneuve",
-    city: "Montréal",
-    dates: "22 - 24 May",
-    raceDate: "May 24",
-    hasSprint: true,
-    slug: "canada",
-    utcOffset: -4,
-    raceStartLocal: "16:00",
-    qualiStartLocal: "16:00",
-    sprintStartLocal: "12:00",
+    meetingId: 1285,
   },
   {
     round: 8,
@@ -142,20 +93,8 @@ export const F1_2026_CALENDAR: F1CalendarRace[] = [
     utcOffset: 2,
     raceStartLocal: "15:00",
     qualiStartLocal: "16:00",
-  },
-  {
-    round: 9,
-    country: "Barcelona-Catalunya",
-    officialName: "FORMULA 1 MSC CRUISES GRAN PREMIO DE BARCELONA-CATALUNYA 2026",
-    circuit: "Circuit de Barcelona-Catalunya",
-    city: "Barcelona",
-    dates: "12 - 14 Jun",
-    raceDate: "Jun 14",
-    hasSprint: false,
-    slug: "spain",
-    utcOffset: 2,
-    raceStartLocal: "15:00",
-    qualiStartLocal: "16:00",
+    meetingId: 1287,
+    f1Slug: "barcelona-catalunya",
   },
   {
     round: 10,
@@ -170,21 +109,7 @@ export const F1_2026_CALENDAR: F1CalendarRace[] = [
     utcOffset: 2,
     raceStartLocal: "15:00",
     qualiStartLocal: "16:00",
-  },
-  {
-    round: 11,
-    country: "Great Britain",
-    officialName: "FORMULA 1 PIRELLI BRITISH GRAND PRIX 2026",
-    circuit: "Silverstone Circuit",
-    city: "Silverstone",
-    dates: "03 - 05 Jul",
-    raceDate: "Jul 5",
-    hasSprint: true,
-    slug: "great-britain",
-    utcOffset: 1, // BST
-    raceStartLocal: "15:00",
-    qualiStartLocal: "16:00",
-    sprintStartLocal: "12:00",
+    meetingId: 1289,
   },
   {
     round: 12,
@@ -199,20 +124,7 @@ export const F1_2026_CALENDAR: F1CalendarRace[] = [
     utcOffset: 2,
     raceStartLocal: "15:00",
     qualiStartLocal: "16:00",
-  },
-  {
-    round: 13,
-    country: "Hungary",
-    officialName: "FORMULA 1 AWS HUNGARIAN GRAND PRIX 2026",
-    circuit: "Hungaroring",
-    city: "Budapest",
-    dates: "24 - 26 Jul",
-    raceDate: "Jul 26",
-    hasSprint: false,
-    slug: "hungary",
-    utcOffset: 2,
-    raceStartLocal: "15:00",
-    qualiStartLocal: "16:00",
+    meetingId: 1291,
   },
   {
     round: 14,
@@ -228,20 +140,7 @@ export const F1_2026_CALENDAR: F1CalendarRace[] = [
     raceStartLocal: "15:00",
     qualiStartLocal: "16:00",
     sprintStartLocal: "12:00",
-  },
-  {
-    round: 15,
-    country: "Italy",
-    officialName: "FORMULA 1 PIRELLI GRAN PREMIO D'ITALIA 2026",
-    circuit: "Autodromo Nazionale Monza",
-    city: "Monza",
-    dates: "04 - 06 Sep",
-    raceDate: "Sep 6",
-    hasSprint: false,
-    slug: "italy",
-    utcOffset: 2,
-    raceStartLocal: "15:00",
-    qualiStartLocal: "16:00",
+    meetingId: 1293,
   },
   {
     round: 16,
@@ -256,20 +155,7 @@ export const F1_2026_CALENDAR: F1CalendarRace[] = [
     utcOffset: 2,
     raceStartLocal: "15:00",
     qualiStartLocal: "16:00",
-  },
-  {
-    round: 17,
-    country: "Azerbaijan",
-    officialName: "FORMULA 1 QATAR AIRWAYS AZERBAIJAN GRAND PRIX 2026",
-    circuit: "Baku City Circuit",
-    city: "Baku",
-    dates: "24 - 26 Sep",
-    raceDate: "Sep 26",
-    hasSprint: false,
-    slug: "azerbaijan",
-    utcOffset: 4,
-    raceStartLocal: "15:00",
-    qualiStartLocal: "16:00",
+    meetingId: 1295,
   },
   {
     round: 18,
@@ -285,20 +171,7 @@ export const F1_2026_CALENDAR: F1CalendarRace[] = [
     raceStartLocal: "20:00",
     qualiStartLocal: "21:00",
     sprintStartLocal: "17:00",
-  },
-  {
-    round: 19,
-    country: "United States",
-    officialName: "FORMULA 1 MSC CRUISES UNITED STATES GRAND PRIX 2026",
-    circuit: "Circuit of The Americas",
-    city: "Austin",
-    dates: "23 - 25 Oct",
-    raceDate: "Oct 25",
-    hasSprint: false,
-    slug: "united-states",
-    utcOffset: -5, // CDT
-    raceStartLocal: "15:00",
-    qualiStartLocal: "16:00",
+    meetingId: 1297,
   },
   {
     round: 20,
@@ -313,20 +186,7 @@ export const F1_2026_CALENDAR: F1CalendarRace[] = [
     utcOffset: -6,
     raceStartLocal: "14:00",
     qualiStartLocal: "15:00",
-  },
-  {
-    round: 21,
-    country: "Brazil",
-    officialName: "FORMULA 1 MSC CRUISES GRANDE PRÊMIO DE SÃO PAULO 2026",
-    circuit: "Autódromo José Carlos Pace",
-    city: "São Paulo",
-    dates: "06 - 08 Nov",
-    raceDate: "Nov 8",
-    hasSprint: false,
-    slug: "brazil",
-    utcOffset: -3,
-    raceStartLocal: "14:00",
-    qualiStartLocal: "15:00",
+    meetingId: 1299,
   },
   {
     round: 22,
@@ -341,20 +201,7 @@ export const F1_2026_CALENDAR: F1CalendarRace[] = [
     utcOffset: -8,
     raceStartLocal: "20:00",
     qualiStartLocal: "20:00",
-  },
-  {
-    round: 23,
-    country: "Qatar",
-    officialName: "FORMULA 1 QATAR AIRWAYS QATAR GRAND PRIX 2026",
-    circuit: "Lusail International Circuit",
-    city: "Lusail",
-    dates: "27 - 29 Nov",
-    raceDate: "Nov 29",
-    hasSprint: false,
-    slug: "qatar",
-    utcOffset: 3,
-    raceStartLocal: "19:00",
-    qualiStartLocal: "21:00",
+    meetingId: 1301,
   },
   {
     round: 24,
@@ -369,6 +216,7 @@ export const F1_2026_CALENDAR: F1CalendarRace[] = [
     utcOffset: 4,
     raceStartLocal: "17:00",
     qualiStartLocal: "18:00",
+    meetingId: 1302,
   },
 ];
 

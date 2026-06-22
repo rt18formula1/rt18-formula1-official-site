@@ -8,7 +8,6 @@ import { jolpicaApi, type F1OfficialRace, type RaceResult } from "@/lib/jolpica-
 import OpenF1RoundModal from "@/components/f1-database-round-modal";
 import F1ImageExportModal from "@/components/f1-image-export-modal";
 import { F1_2026_CALENDAR, TRIGGER_TYPES, F1CalendarRace, TriggerType } from "@/lib/f1-data-constants";
-import { motion, AnimatePresence } from "framer-motion";
 
 export default function F1JolpicaClient() {
   const { language, t } = useLanguage();
@@ -1449,14 +1448,8 @@ export default function F1JolpicaClient() {
                       </span>
                     )}
                   </button>
-
-                  <AnimatePresence>
                     {selectedSnsRound === race.round && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
+                      <div
                         className="overflow-hidden bg-gray-50/30 px-5 py-3 border-t border-gray-100"
                       >
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 py-2">
@@ -1488,9 +1481,8 @@ export default function F1JolpicaClient() {
                             );
                           })}
                         </div>
-                      </motion.div>
+                      </div>
                     )}
-                  </AnimatePresence>
                 </div>
               ))}
             </div>

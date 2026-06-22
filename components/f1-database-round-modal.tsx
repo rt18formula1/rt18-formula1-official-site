@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/components/providers/language-provider";
-import { openf1Api, type OpenF1Meeting, type OpenF1Session, type OpenF1ResultRow, type OpenF1Driver, getMeetings, getSessions, getResultRows, getDriverRows } from "@/lib/openf1-api";
+import { type OpenF1Meeting, type OpenF1Session, type OpenF1ResultRow, type OpenF1Driver, getMeetings, getSessions, getResultRows, getDriverRows } from "@/lib/openf1-api";
 
 type SessionTab = "qualifying" | "sprint" | "race";
 

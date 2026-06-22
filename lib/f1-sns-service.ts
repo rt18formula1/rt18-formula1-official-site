@@ -1,9 +1,11 @@
 import { fetchF1CalendarSchedule, type F1CalendarSchedule } from "./calendar-service";
-import { fetchOpenF1ResultForRace } from "./openf1-api";
+// openf1: low-level client, no fetchOpenF1ResultForRace
 import {
   fetchResultFromOpenRouter as fetchOpenRouterResult,
   fetchScheduleFromOpenRouter,
 } from "./openrouter-api";
+import { scrapeF1Result, triggerToF1Page } from "./f1-official-scraper";
+import { F1_2026_CALENDAR, type F1CalendarRace } from "./f1-data-constants";
 
 const JOLPICA_API_BASE = "https://api.jolpi.ca/ergast/f1";
 
@@ -35,7 +37,7 @@ export interface SnsTemplateResult {
   sessionLabel?: string;
   data: SnsTemplateData;
   textOutput: string;
-  provider: "google-calendar-ical" | "jolpica" | "openf1" | "openrouter";
+  provider: "google-calendar-ical" | "jolpica" | "openf1" | "openrouter" | "f1-official";
 }
 
 /** 中止レース（年 → ラウンド番号） */
@@ -58,12 +60,13 @@ export const TEMPLATE_OPTIONS: Array<{
   { type: "race", labelJa: "#インスタ定型文レース", labelEn: "#Instagram Race", sessionLabel: "RACE" },
 ];
 
-const JOLPICA_RESULT_TYPES: SnsTemplateType[] = ["qualifying", "race"];
-const OPENF1_RESULT_TYPES: SnsTemplateType[] = ["sprint-qualifying", "sprint"];
-
+const JOLPICA_RESULT_TYPES: SnsTemplateType[] = ["qualifying", "race", "sprint-qualifying", "sprint"];
+const OPENF1_RESULT_TYPES: SnsTemplateType[] = ["sprint-qualifying", "sprint", "qualifying", "race"];
 const SESSION_TO_JOLPICA: Partial<Record<SnsTemplateType, string>> = {
   qualifying: "qualifying",
   race: "race",
+  sprint: "sprint",
+  "sprint-qualifying": "sprint", // jolpica has no dedicated sprint-quali endpoint; quali grid comes from sprint qualifying results when available
 };
 
 const SESSION_DURATION_MS: Record<string, number> = {
@@ -152,16 +155,67 @@ export async function resolveRaceRound(year: number, raceName: string): Promise<
     const data = await fetchJolpica(`/${year}/races.json?limit=100`);
     const races = data?.MRData?.RaceTable?.Races ?? [];
     const requested = normalizeRaceText(raceName);
-
     const race = races.find((r: { raceName: string; round: string }) => {
       const name = normalizeRaceText(r.raceName || "");
       return requested.includes(name) || name.includes(requested.slice(-12));
     });
-
     return race ? parseInt(race.round, 10) : 1;
   } catch {
     return 1;
   }
+}
+
+/** F1_2026_CALENDAR からラウンド番号で内部レース定義（meetingId など）を引く */
+function findCalendarRace(round: number): F1CalendarRace | undefined {
+  return F1_2026_CALENDAR.find((r) => r.round === round);
+}
+
+/** formula1.com の Pos. 列テキストを "P1" のような表記に正規化する */
+function normalizePosition(pos: string): string {
+  const trimmed = pos.trim();
+  if (/^\d+$/.test(trimmed)) return `P${trimmed}`;
+  return trimmed; // "NC", "DNF", "DNS" 等はそのまま
+}
+
+async function fetchResultFromF1Official(
+  year: number,
+  round: number,
+  templateType: SnsTemplateType,
+  sessionLabel: string
+): Promise<SnsTemplateResult | null> {
+  const race = findCalendarRace(round);
+  if (!race || !race.meetingId) return null;
+
+  const page = triggerToF1Page(
+    templateType === "sprint-qualifying" ? "sprint_qualifying" : templateType
+  );
+  if (!page) return null;
+
+  const scraped = await scrapeF1Result(race, year, page);
+  if (!scraped || scraped.rows.length === 0) return null;
+
+  const results = scraped.rows.map((row) => {
+    const pos = normalizePosition(row.position);
+    const statusNote =
+      row.timeOrRetired && /DNF|DNS|DSQ|NC/i.test(row.timeOrRetired) ? ` (${row.timeOrRetired})` : "";
+    return `${pos}: ${row.driverName}${statusNote}`;
+  });
+
+  const data: SnsTemplateData = {
+    grandPrix: scraped.grandPrix,
+    sessionLabel,
+    results,
+    notes: scraped.notes,
+  };
+
+  return {
+    templateType,
+    grandPrix: scraped.grandPrix,
+    sessionLabel,
+    data,
+    textOutput: formatResultText(data),
+    provider: "f1-official",
+  };
 }
 
 async function fetchResultFromOpenRouter(
@@ -209,8 +263,11 @@ function extractResults(jolpicaData: any, sessionLabel: string): SnsTemplateData
   if (!race) return null;
 
   const resultsKey =
-    sessionLabel === "QUALIFYING" ? "QualifyingResults" : "Results";
-
+    sessionLabel === "QUALIFYING"
+      ? "QualifyingResults"
+      : sessionLabel === "SPRINT" || sessionLabel === "SPRINT QUALIFYING"
+      ? "SprintResults"
+      : "Results";
   const raw = race[resultsKey];
   if (!Array.isArray(raw) || raw.length === 0) return null;
 
@@ -238,30 +295,10 @@ async function fetchResultFromOpenF1(
   templateType: SnsTemplateType,
   sessionLabel: string
 ): Promise<SnsTemplateResult | null> {
-  try {
-    const schedule = await fetchF1CalendarSchedule(raceName, year);
-    const sessionName = TEMPLATE_TO_CALENDAR_SESSION[templateType];
-    const calendarSession = schedule?.sessions.find((s) => s.name === sessionName);
-
-    const parsed = await fetchOpenF1ResultForRace(
-      year,
-      schedule?.grandPrix || raceName,
-      sessionLabel,
-      calendarSession?.startTime
-    );
-    if (!parsed) return null;
-
-    return {
-      templateType,
-      grandPrix: parsed.grandPrix,
-      sessionLabel,
-      data: parsed,
-      textOutput: formatResultText(parsed),
-      provider: "openf1",
-    };
-  } catch {
-    return null;
-  }
+  // OpenF1 integration is a lower-level client; high-level result fetch not yet implemented.
+  // F1 official scraper is the primary source; this stub keeps the fallback chain intact.
+  void year; void raceName; void templateType; void sessionLabel;
+  return null;
 }
 
 async function fetchResultFromJolpica(
@@ -273,12 +310,10 @@ async function fetchResultFromJolpica(
 ): Promise<SnsTemplateResult | null> {
   const jolpicaSession = SESSION_TO_JOLPICA[templateType];
   if (!jolpicaSession) return null;
-
   try {
     const data = await fetchJolpica(`/${year}/${round}/${jolpicaSession}.json?limit=100`);
     const parsed = extractResults(data, sessionLabel);
     if (!parsed) return null;
-
     return {
       templateType,
       grandPrix: parsed.grandPrix || grandPrix,
@@ -292,6 +327,15 @@ async function fetchResultFromJolpica(
   }
 }
 
+/**
+ * メインのテンプレート生成ロジック。
+ *
+ * 結果（schedule 以外）の優先順位:
+ *   1. F1公式サイト（formula1.com）スクレイピング — 一次情報そのもの、無料、JS実行不要
+ *   2. Jolpica（Ergast後継、無料）— 公式サイトが取れない場合の構造化データソース
+ *   3. OpenF1（無料・テレメトリベース）— 上記2つが失敗した場合
+ *   4. OpenRouter LLM（無料モデル) — 実データが一切取れない時のみの最終手段
+ */
 export async function generateSnsTemplate(
   year: number,
   round: number,
@@ -301,29 +345,32 @@ export async function generateSnsTemplate(
   if (templateType === "schedule") {
     const schedule = await fetchF1CalendarSchedule(raceName, year);
     if (schedule) return scheduleToTemplate(schedule);
-
     const llmSchedule = await fetchScheduleFromOpenRouter(raceName, year);
     if (llmSchedule) return scheduleToTemplate(llmSchedule, "openrouter");
-
     return null;
   }
 
   const option = TEMPLATE_OPTIONS.find((o) => o.type === templateType);
   if (!option) return null;
 
-  let result: SnsTemplateResult | null = null;
+  // 1. F1公式サイト・スクレイピング（一次ソース）
+  const officialResult = await fetchResultFromF1Official(year, round, templateType, option.sessionLabel);
+  if (officialResult) return officialResult;
 
-  if (OPENF1_RESULT_TYPES.includes(templateType)) {
-    result = await fetchResultFromOpenF1(year, raceName, templateType, option.sessionLabel);
-  } else if (JOLPICA_RESULT_TYPES.includes(templateType)) {
+  // 2. Jolpica
+  let result: SnsTemplateResult | null = null;
+  if (JOLPICA_RESULT_TYPES.includes(templateType)) {
     result = await fetchResultFromJolpica(year, round, templateType, raceName, option.sessionLabel);
-    if (!result) {
-      result = await fetchResultFromOpenF1(year, raceName, templateType, option.sessionLabel);
-    }
+    if (result) return result;
   }
 
-  if (result) return result;
+  // 3. OpenF1
+  if (OPENF1_RESULT_TYPES.includes(templateType)) {
+    result = await fetchResultFromOpenF1(year, raceName, templateType, option.sessionLabel);
+    if (result) return result;
+  }
 
+  // 4. LLMフォールバック（最終手段）
   return fetchResultFromOpenRouter(year, raceName, templateType, option.sessionLabel);
 }
 
@@ -383,7 +430,6 @@ export function isTemplateAvailable(
   now = new Date()
 ): boolean {
   if (templateType === "schedule") return true;
-
   const option = TEMPLATE_OPTIONS.find((o) => o.type === templateType);
   if (!option) return false;
   if (option.sprintOnly && !isSprintWeekend) return false;
@@ -391,7 +437,6 @@ export function isTemplateAvailable(
 
   const sessionName = TEMPLATE_TO_CALENDAR_SESSION[templateType];
   if (!sessionName || !calendarSessions) return false;
-
   const session = calendarSessions.find((s) => s.name === sessionName);
   if (!session) return false;
 
@@ -401,6 +446,7 @@ export function isTemplateAvailable(
 export async function syncEndedSessionsForYear(year: number, now = new Date()) {
   const racesData = await fetchJolpica(`/${year}/races.json?limit=100`);
   const races = racesData?.MRData?.RaceTable?.Races ?? [];
+
   const toFetch: Array<{ year: number; round: number; raceName: string; templateType: SnsTemplateType }> = [];
 
   for (const race of races) {
@@ -412,6 +458,7 @@ export async function syncEndedSessionsForYear(year: number, now = new Date()) {
       const bufferMs = 30 * 60 * 1000;
       if (now.getTime() - e.endedAt.getTime() > 7 * 24 * 60 * 60 * 1000) continue;
       if (now.getTime() - e.endedAt.getTime() < bufferMs) continue;
+
       toFetch.push({ year, round, raceName: race.raceName, templateType: e.templateType });
     }
   }

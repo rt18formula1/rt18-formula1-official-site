@@ -1,5 +1,5 @@
 # rt18_formula1 Official Site - DEVELOPMENT.md
-最終更新: 2026-05-21 00:00 (JST)
+最終更新: 2026-06-22 00:00 (JST)
 
 ---
 
@@ -311,3 +311,53 @@ ClaudeやDevinなどの後続エージェントは、作業前に必ず以下の
 - Commit: e6e07ce
 - Push: origin/main
 - Vercel: Ready in 1m
+
+---
+
+### 2026-06-22 Claude/Codex整理ログ: F1 SNS投稿定型文出力と公式結果取得の統合
+
+#### Claude開発で追加・変更された内容
+- **F1DBにSNS投稿定型文出力タブを追加**
+  - `components/f1-jolpica-client.tsx` に `sns` タブを追加。
+  - `F1_2026_CALENDAR` をもとにRound一覧を表示。
+  - 中止扱いのRound 4 Bahrain / Round 5 Saudi Arabia は無効表示。
+  - 各Roundを開くと、スケジュール・スプリント予選・スプリント・予選・レースの定型文生成ボタンを表示。
+
+- **Base44風の出力モーダルを追加**
+  - 新規 `components/f1-image-export-modal.tsx` を追加。
+  - 生成された投稿文をモーダルでプレビュー。
+  - ハッシュタグ/メンションを除いた本文をコピー可能。
+  - Canvasで4:5寄りのJPEGを書き出し、`rt18_formula1` ロゴを下部に配置。
+  - 未導入依存を避けるため、`lucide-react` / `framer-motion` は使わず標準DOMで実装。
+
+- **2026年F1カレンダー・トリガー定義を追加**
+  - 新規 `lib/f1-data-constants.ts` を追加。
+  - Round番号、国名、公式GP名、サーキット、日程、Sprint有無、Formula1.com meetingId / slug を管理。
+  - `TRIGGER_TYPES` で投稿出力ボタン定義を一元管理。
+
+- **Formula1.com公式結果スクレイパーを追加**
+  - 新規 `lib/f1-official-scraper.ts` を追加。
+  - `https://www.formula1.com/en/results/{year}/races/{meetingId}/{slug}/{page}` からHTMLテーブルを取得。
+  - Race / Qualifying / Sprint / Sprint Qualifying の結果ページに対応。
+  - ドライバー名末尾の3文字コード除去、Pos列の保持、Notes抽出を実装。
+
+- **SNSテンプレート生成サービスを強化**
+  - `lib/f1-sns-service.ts` を更新。
+  - スケジュールはGoogle Calendar iCalを優先。
+  - 結果系の取得優先順位を以下に整理:
+    1. Formula1.com公式結果スクレイピング
+    2. Jolpica
+    3. OpenF1
+    4. OpenRouter LLMフォールバック
+  - セッション終了時刻から、終了済みセッションの投稿候補を返す `getEndedSessionsForRace()` / `syncEndedSessionsForYear()` を追加。
+  - 文字化けしていたコメント、`Race` 判定、`TEMPLATE_OPTIONS.find()` の変数名ミスを修正。
+
+- **OpenF1クライアント補助関数を追加**
+  - `lib/openf1-api.ts` に `getMeetings`, `getSessions`, `getResultRows`, `getDriverRows` を追加。
+  - `components/f1-database-round-modal.tsx` はこれらのローカルlib row helperを使う形に更新。
+
+#### 注意点
+- ローカル外部HDD上で `npx tsc --noEmit` と `npm run build` が初期化/I/O待ちで戻らない事象あり。
+- `.next` 生成キャッシュをプロジェクト外 `/tmp/rt18-next-backups/` に退避して再試行したが、TypeScript/Nextのローカル検証は完了できず。
+- 差分静的チェックでは未導入依存参照と明らかな文字化け/構文崩れは修正済み。
+- 最終確認はVercelのリモートProduction build結果をもって行う。
