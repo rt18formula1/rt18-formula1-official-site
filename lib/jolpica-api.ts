@@ -30,18 +30,6 @@ export interface F1OfficialRace {
   cancelled: boolean;
   notes: string[];
   results?: RaceResult[];
-  sessions?: {
-    fp1?: { date: string; time: string };
-    fp2?: { date: string; time: string };
-    fp3?: { date: string; time: string };
-    sprintQualifying?: { date: string; time: string };
-    sprint?: { date: string; time: string };
-    qualifying?: { date: string; time: string };
-    race?: { date: string; time: string };
-    circuitTimezone?: string;
-    circuitLat?: string;
-    circuitLng?: string;
-  };
 }
 
 export interface F1OfficialData {
