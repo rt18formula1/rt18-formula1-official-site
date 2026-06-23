@@ -1,8 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/f1-sns-sync",
-      "schedule": "*/30 * * * *"
-    }
-  ]
-}
+{"crons":[{"path":"/api/cron/f1-sns-sync","schedule":"0 * * * *"}]}
