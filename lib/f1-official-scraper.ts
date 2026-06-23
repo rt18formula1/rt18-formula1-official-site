@@ -142,9 +142,12 @@ function cleanDriverName(raw: string): string {
 }
 
 function extractNotes(html: string): string | null {
-  const m = html.match(/Note\s*-\s*([^<]+)</i);
-  if (!m) return null;
-  return m[1].replace(/\s+/g, " ").trim();
+  // Match all "Note - ..." sentences (there can be multiple, e.g. two penalty notes)
+  const matches = [...html.matchAll(/Note\s*-\s*([^<]+)</gi)];
+  if (matches.length === 0) return null;
+  return matches
+    .map((m) => "Note - " + m[1].replace(/\s+/g, " ").trim())
+    .join("\n");
 }
 
 function extractGrandPrixTitle(html: string): string | null {
