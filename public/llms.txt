@@ -1,0 +1,40 @@
+User-agent: *
+Allow: /
+
+# rt18_formula1 Official Website AI Crawl Guide
+
+This file provides a structured overview for AI crawlers to understand the content and purpose of the rt18-formula1-official-site.vercel.app website.
+
+## Website Purpose
+The rt18_formula1 website showcases F1 fan art, illustrations, and provides the latest news and calendar updates from the world of Formula 1. It aims to immerse visitors in the F1 world through visual content and timely information.
+
+## Key Sections for AI Crawling
+
+### 1. News
+- **URL**: https://rt18-formula1-official-site.vercel.app/news
+- **Content**: Latest Formula 1 news, race results, qualifying results, and schedules. Updated frequently.
+
+### 2. Calendar
+- **URL**: https://rt18-formula1-official-site.vercel.app/calendar
+- **Content**: Upcoming F1 race schedules, practice sessions, qualifying, and race times. Provides location and dates.
+
+### 3. Profile
+- **URL**: https://rt18-formula1-official-site.vercel.app/profile (Implicit from homepage)
+- **Content**: Information about the creator, rt18_formula1, and links to various social media platforms (Instagram, X, YouTube, TikTok, GitHub, Threads, LinkedIn, LINE).
+
+### 4. Portfolio / Illustrations
+- **URL**: https://rt18-formula1-official-site.vercel.app/portfolio (Implicit from homepage)
+- **Content**: Collection of F1 fan art and illustrations, depicting iconic F1 moments, drivers, and cars.
+
+### 5. Request & Contact
+- **Request URL**: https://forms.gle/7vbRQrDKF4MZpv1G8
+- **Contact URL**: https://forms.gle/sCnwiNJ5gkLLt9Bn8
+- **Content**: Forms for illustration requests and general inquiries.
+
+## Important Notes for AI
+- The site is primarily visual, focusing on F1 fan art and illustrations.
+- News and Calendar sections are updated regularly with the latest F1 information.
+- All content is related to Formula 1, including historical and current events.
+- Social media links provide further engagement points.
+
+Sitemap: https://rt18-formula1-official-site.vercel.app/sitemap.xml
