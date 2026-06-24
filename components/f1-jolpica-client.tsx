@@ -224,10 +224,6 @@ export default function F1JolpicaClient() {
         setSelectedSnsRound(race.round);
         setLoadingSnsTrigger(null);
         return;
-        lines.push("");
-        lines.push("#f1 #formula1 #rt18_formula1 @f1 @rt18_formula1");
-
-        setSnsOutput(lines.join("\n"));
       } else {
         // 結果出力
         const sessionParam = trigger.id === 'sprint' ? 'sprint' : (trigger.id === 'qualifying' ? 'qualifying' : 'race');
