@@ -208,32 +208,22 @@ export default function F1JolpicaClient() {
     setLoadingSnsTrigger(trigger.id);
     try {
       if (trigger.id === 'schedule') {
-        const res = await fetch(`/api/f1-jolpica?type=session-times&round=${race.round}&year=2026`);
+        const res = await fetch('/api/f1-sns', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            year: 2026,
+            round: race.round,
+            templateType: 'schedule',
+            raceName: race.officialName,
+          }),
+        });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
-        
-        const lines: string[] = [];
-        lines.push(race.officialName);
-        lines.push("");
-        lines.push("【Schedule】");
-
-        data.sessions.forEach((session: any, idx: number) => {
-          if (idx > 0) {
-            lines.push("");
-            lines.push("");
-          }
-          lines.push(session.name);
-
-          const start = formatSnsSessionTime(session.startDate, race.utcOffset);
-          const end = formatSnsSessionTime(session.endDate, race.utcOffset);
-
-          lines.push(`TrackTime : ${start.track} - ${end.track.split(' ')[1]}`);
-          lines.push(`JapanTime : ${start.japan} - ${end.japan.split(' ')[1]}`);
-        });
-
-        lines.push("");
-        lines.push(`TrackTime : UTC${race.utcOffset >= 0 ? "+" : ""}${race.utcOffset}`);
-        lines.push(`JapanTime : UTC+9`);
+        setSnsOutput(data.textOutput ?? '');
+        setSelectedSnsRound(race.round);
+        setLoadingSnsTrigger(null);
+        return;
         lines.push("");
         lines.push("#f1 #formula1 #rt18_formula1 @f1 @rt18_formula1");
 
