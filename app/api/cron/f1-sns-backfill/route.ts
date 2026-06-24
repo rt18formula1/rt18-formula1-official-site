@@ -6,19 +6,19 @@ import { F1_2026_CALENDAR } from "@/lib/f1-data-constants";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Round 1-9 (Australia to Barcelona) の終了済みセッション一覧
-const BACKFILL_SESSIONS: Array<{
-  round: number;
-  raceName: string;
-  templateTypes: string[];
+// Barcelona (Round 9) までの終了済みセッションを強制取得するバックフィル用API
+// 一時的なエンドポイント。使い終わっ�ら削除してOK。
+const BACKFILL_UP_TO_ROUND = 9;
+
+const SESSION_TYPES: Array<{
+  id: "schedule" | "qualifying" | "race" | "sprint" | "sprint-qualifying";
+  sprintOnly?: boolean;
 }> = [
-  { round: 1, raceName: "Australian Grand Prix", templateTypes: ["qualifying", "race"] },
-  { round: 2, raceName: "Chinese Grand Prix",    templateTypes: ["sprint-qualifying", "sprint", "qualifying", "race"] },
-  { round: 3, raceName: "Japanese Grand Prix",   templateTypes: ["qualifying", "race"] },
-  { round: 6, raceName: "Miami Grand Prix",      templateTypes: ["sprint-qualifying", "sprint", "qualifying", "race"] },
-  { round: 7, raceName: "Canadian Grand Prix",   templateTypes: ["sprint-qualifying", "sprint", "qualifying", "race"] },
-  { round: 8, raceName: "Monaco Grand Prix",     templateTypes: ["qualifying", "race"] },
-  { round: 9, raceName: "Barcelona-Catalunya Grand Prix", templateTypes: ["qualifying", "race"] },
+  { id: "schedule" },
+  { id: "qualifying" },
+  { id: "race" },
+  { id: "sprint", sprintOnly: true },
+  { id: "sprint-qualifying", sprintOnly: true },
 ];
 
 export async function GET(request: Request) {
@@ -29,30 +29,53 @@ export async function GET(request: Request) {
   }
 
   const year = 2026;
-  const results: Array<{ round: number; templateType: string; status: string; provider?: string }> = [];
+  const results: Array<{
+    round: number;
+    raceName: string;
+    templateType: string;
+    status: string;
+    provider?: string;
+  }> = [];
 
-  for (const session of BACKFILL_SESSIONS) {
-    for (const templateType of session.templateTypes) {
+  const races = F1_2026_CALENDAR.filter(
+    (r) => r.round <= BACKFILL_UP_TO_ROUND && !r.cancelled
+  );
+
+  for (const race of races) {
+    for (const session of SESSION_TYPES) {
+      if (session.sprintOnly && !race.hasSprint) continue;
+
       try {
         const generated = await generateSnsTemplate(
           year,
-          session.round,
-          templateType as any,
-          session.raceName
+          race.round,
+          session.id,
+          race.officialName
         );
         if (generated) {
-          await upsertSnsCache(generated, year, session.round);
+          await upsertSnsCache(generated, year, race.round);
           results.push({
-            round: session.round,
-            templateType,
+            round: race.round,
+            raceName: race.country,
+            templateType: session.id,
             status: "fetched",
             provider: generated.provider,
           });
         } else {
-          results.push({ round: session.round, templateType, status: "unavailable" });
+          results.push({
+            round: race.round,
+            raceName: race.country,
+            templateType: session.id,
+            status: "unavailable",
+          });
         }
       } catch (e) {
-        results.push({ round: session.round, templateType, status: `error: ${e}` });
+        results.push({
+          round: race.round,
+          raceName: race.country,
+          templateType: session.id,
+          status: `error: ${e instanceof Error ? e.message : String(e)}`,
+        });
       }
     }
   }

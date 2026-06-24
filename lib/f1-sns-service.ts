@@ -444,22 +444,28 @@ export function isTemplateAvailable(
 }
 
 export async function syncEndedSessionsForYear(year: number, now = new Date()) {
-  const racesData = await fetchJolpica(`/${year}/races.json?limit=100`);
-  const races = racesData?.MRData?.RaceTable?.Races ?? [];
+  // Use local calendar data instead of Jolpica (which is unstable/beta)
+  const calendarRaces = F1_2026_CALENDAR.filter((r) => !r.cancelled);
 
   const toFetch: Array<{ year: number; round: number; raceName: string; templateType: SnsTemplateType }> = [];
 
-  for (const race of races) {
-    const round = parseInt(race.round, 10);
-    if (isRoundCancelled(year, round)) continue;
+  for (const race of calendarRaces) {
+    if (isRoundCancelled(year, race.round)) continue;
 
-    const ended = await getEndedSessionsForRace(year, round, race.raceName, now);
+    // Also queue schedule fetch if not yet past race day
+    const raceDate = new Date(race.raceDate + " " + year);
+    if (now > raceDate) {
+      // Schedule: always include for past races
+      toFetch.push({ year, round: race.round, raceName: race.officialName, templateType: "schedule" });
+    }
+
+    const ended = await getEndedSessionsForRace(year, race.round, race.officialName, now);
     for (const e of ended) {
       const bufferMs = 30 * 60 * 1000;
       if (now.getTime() - e.endedAt.getTime() > 7 * 24 * 60 * 60 * 1000) continue;
       if (now.getTime() - e.endedAt.getTime() < bufferMs) continue;
 
-      toFetch.push({ year, round, raceName: race.raceName, templateType: e.templateType });
+      toFetch.push({ year, round: race.round, raceName: race.officialName, templateType: e.templateType });
     }
   }
 
