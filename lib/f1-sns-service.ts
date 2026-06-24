@@ -452,14 +452,16 @@ export async function syncEndedSessionsForYear(year: number, now = new Date()) {
   for (const race of calendarRaces) {
     if (isRoundCancelled(year, race.round)) continue;
 
-    // Also queue schedule fetch if not yet past race day
-    const raceDate = new Date(race.raceDate + " " + year);
-    if (now > raceDate) {
-      // Schedule: always include for past races
+    // Also queue schedule for past races (use raceStartLocal + utcOffset to build a UTC date)
+    // raceDate is like "Mar 8" - parse via calendar sessions instead; use a simple heuristic:
+    // If any session startTime in the calendar is in the past, treat as past race.
+    const endedSessions = await getEndedSessionsForRace(year, race.round, race.officialName, now);
+    const isPastRace = endedSessions.some((s) => s.sessionName === "Race");
+    if (isPastRace) {
       toFetch.push({ year, round: race.round, raceName: race.officialName, templateType: "schedule" });
     }
 
-    const ended = await getEndedSessionsForRace(year, race.round, race.officialName, now);
+    const ended = endedSessions;
     for (const e of ended) {
       const bufferMs = 30 * 60 * 1000;
       if (now.getTime() - e.endedAt.getTime() > 7 * 24 * 60 * 60 * 1000) continue;
