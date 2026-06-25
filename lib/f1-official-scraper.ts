@@ -142,12 +142,19 @@ function cleanDriverName(raw: string): string {
 }
 
 function extractNotes(html: string): string | null {
-  // Match all "Note - ..." sentences (there can be multiple, e.g. two penalty notes)
-  const matches = [...html.matchAll(/Note\s*-\s*([^<]+)</gi)];
-  if (matches.length === 0) return null;
-  return matches
-    .map((m) => "Note - " + m[1].replace(/\s+/g, " ").trim())
-    .join("\n");
+  // Find the Note section at the bottom of the results page.
+  // formula1.com renders notes inside a <p> or plain text block after the table.
+  // We look for the first occurrence only to avoid duplicates from JSON-LD / meta tags.
+  const noteSection = html.match(/<p[^>]*>\s*(Note\s*-[^<]+(?:<[^>]+>[^<]*)*)<\/p>/i)
+    || html.match(/Note\s*-\s*([A-Z][^<]{20,})/);
+  if (!noteSection) return null;
+
+  // Strip inner HTML tags and split on sentence boundaries
+  const raw = noteSection[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  // Split on ". " followed by capital to get individual notes
+  const sentences = raw.split(/\.\s+(?=[A-Z])/).map(s => s.trim()).filter(Boolean);
+  const unique = [...new Set(sentences)];
+  return unique.map(s => "Note - " + s.replace(/^Note\s*-\s*/i, "")).join("\n");
 }
 
 function extractGrandPrixTitle(html: string): string | null {

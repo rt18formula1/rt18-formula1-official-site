@@ -207,76 +207,31 @@ export default function F1JolpicaClient() {
   const handleSnsTrigger = async (race: F1CalendarRace, trigger: TriggerType) => {
     setLoadingSnsTrigger(trigger.id);
     try {
-      if (trigger.id === 'schedule') {
-        const res = await fetch('/api/f1-sns', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            year: 2026,
-            round: race.round,
-            templateType: 'schedule',
-            raceName: race.officialName,
-          }),
-        });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        const data = await res.json();
-        setSnsOutput(data.textOutput ?? '');
-        setSelectedSnsRound(race.round);
-        setLoadingSnsTrigger(null);
-        return;
-      } else {
-        // 結果出力
-        const sessionParam = trigger.id === 'sprint' ? 'sprint' : (trigger.id === 'qualifying' ? 'qualifying' : 'race');
-        const res = await fetch(`/api/f1-jolpica?type=session&round=${race.round}&session=${sessionParam}&year=2026`);
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        const responseJson = await res.json();
-        
-        // 結果データの取り出し
-        let resultsList: any[] = [];
-        if (responseJson.data?.MRData?.RaceTable?.Races?.[0]) {
-          const raceData = responseJson.data.MRData.RaceTable.Races[0];
-          resultsList = raceData.Results || raceData.QualifyingResults || raceData.SprintResults || [];
-        } else if (responseJson.data?.Results) {
-          resultsList = responseJson.data.Results;
-        }
-
-        const lines: string[] = [];
-        lines.push(race.officialName);
-        lines.push(trigger.sessionName);
-        lines.push("");
-        lines.push("【Result】");
-        lines.push("");
-
-        if (resultsList.length === 0) {
-          lines.push("結果データがまだありません。 (No results available yet)");
-        } else {
-          resultsList.forEach((r: any, idx: number) => {
-            const pos = r.position || r.Position || String(idx + 1);
-            const driverName = r.Driver ? `${r.Driver.givenName} ${r.Driver.familyName}` : (r.DriverName || 'Unknown');
-            lines.push(`P${pos} ${driverName}`);
-          });
-        }
-
-        // notes
-        const notes = responseJson.data?.notes || responseJson.data?.MRData?.RaceTable?.Races?.[0]?.notes;
-        if (notes && notes !== "null") {
-          lines.push("");
-          lines.push(`Notes: ${notes}`);
-        }
-
-        lines.push("");
-        lines.push("#f1 #formula1 #rt18_formula1 @f1 @rt18_formula1");
-
-        setSnsOutput(lines.join("\n"));
-      }
+      // すべてのトリガーを /api/f1-sns に統一 (Supabaseキャッシュ経由)
+      const res = await fetch('/api/f1-sns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          year: 2026,
+          round: race.round,
+          templateType: trigger.id,
+          raceName: race.officialName,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setSnsOutput(data.textOutput ?? '');
+      setSelectedSnsRound(race.round);
     } catch (err) {
-      console.error("Error generating SNS post:", err);
-      alert(language === 'ja' ? "データの取得に失敗しました。" : "Failed to fetch session data.");
+      console.error('Error generating SNS post:', err);
+      alert(language === 'ja' ? 'データの取得に失敗しました。' : 'Failed to fetch session data.');
     } finally {
       setLoadingSnsTrigger(null);
     }
   };
-  // タブがstandingsに切り替わったときにスタンディングスを取得
+
+    // タブがstandingsに切り替わったときにスタンディングスを取得
   useEffect(() => {
     if (activeTab === 'standings') {
       fetchStandings();
