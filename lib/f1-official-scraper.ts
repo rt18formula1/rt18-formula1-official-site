@@ -54,7 +54,9 @@ async function fetchHtml(url: string): Promise<string | null> {
       next: { revalidate: 300 },
     });
     if (!res.ok) return null;
-    return await res.text();
+    const raw = await res.text();
+    // Remove <script> blocks to prevent JSON-LD / inline JS from polluting table parsing
+    return raw.replace(/<script[\s\S]*?<\/script>/gi, "");
   } catch {
     return null;
   }
