@@ -58,10 +58,10 @@ export async function GET(request: Request) {
   }
   const standings = rows.map((cells: string[]) => ({
     position: cells[0] ?? "",
-    driver: cleanDriverName(cells[2] ?? ""),
-    nationality: cells[3] ?? "",
-    team: cells[4] ?? "",
-    points: cells[5] ?? "",
+    driver: cleanDriverName(cells[1] ?? ""),
+    nationality: cells[2] ?? "",
+    team: cells[3] ?? "",
+    points: cells[4] ?? "",
     wins: cells[6] ?? "",
   })).filter((s: { position: string }) => s.position && /^\d+$/.test(s.position));
   return NextResponse.json({ standings, url });
