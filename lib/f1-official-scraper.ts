@@ -144,19 +144,26 @@ function cleanDriverName(raw: string): string {
 }
 
 function extractNotes(html: string): string | null {
-  // Find the Note section at the bottom of the results page.
-  // formula1.com renders notes inside a <p> or plain text block after the table.
-  // We look for the first occurrence only to avoid duplicates from JSON-LD / meta tags.
-  const noteSection = html.match(/<p[^>]*>\s*(Note\s*-[^<]+(?:<[^>]+>[^<]*)*)<\/p>/i)
-    || html.match(/Note\s*-\s*([A-Z][^<]{20,})/);
-  if (!noteSection) return null;
-
-  // Strip inner HTML tags and split on sentence boundaries
-  const raw = noteSection[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  // Split on ". " followed by capital to get individual notes
-  const sentences = raw.split(/\.\s+(?=[A-Z])/).map(s => s.trim()).filter(Boolean);
-  const unique = [...new Set(sentences)];
-  return unique.map(s => "Note - " + s.replace(/^Note\s*-\s*/i, "")).join("\n");
+  // formula1.com penalty notes appear as:
+  //   "Note - DriverName received/was ..."
+  // We match only sentences where the text after "Note - " starts with a proper name
+  // (first word is mixed-case, not ALL-CAPS like "OUR PARTNERS").
+  const noteRegex = /Note\s*-\s*([A-Z][a-z][^<.]{10,}(?:\.[^<.]{10,})*)/g;
+  const notes: string[] = [];
+  const seen = new Set<string>();
+  let m: RegExpExecArray | null;
+  // eslint-disable-next-line no-cond-assign
+  while ((m = noteRegex.exec(html)) !== null) {
+    const raw = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    // Skip footer noise: if the text contains typical footer keywords, stop
+    if (/OUR PARTNERS|Download the|Cookie Preferences|Formula One World/i.test(raw)) break;
+    const note = "Note - " + raw.replace(/\.?$/, ".");
+    if (!seen.has(note)) {
+      seen.add(note);
+      notes.push(note);
+    }
+  }
+  return notes.length > 0 ? notes.join("\n") : null;
 }
 
 function extractGrandPrixTitle(html: string): string | null {
