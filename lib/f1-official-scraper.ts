@@ -144,26 +144,19 @@ function cleanDriverName(raw: string): string {
 }
 
 function extractNotes(html: string): string | null {
-  // formula1.com penalty notes appear as:
-  //   "Note - DriverName received/was ..."
-  // We match only sentences where the text after "Note - " starts with a proper name
-  // (first word is mixed-case, not ALL-CAPS like "OUR PARTNERS").
-  const noteRegex = /Note\s*-\s*([A-Z][a-z][^<.]{10,}(?:\.[^<.]{10,})*)/g;
+  // Match "Note - ..." blocks that start with a proper name (mixed-case first word).
+  // Returns the raw text as-is from the official site, joined by newline if multiple blocks.
+  const noteRegex = /Note\s*-\s*([A-Z][a-z][^<]{10,}?)(?=\s*(?:Note\s*-|<|$))/g;
   const notes: string[] = [];
-  const seen = new Set<string>();
   let m: RegExpExecArray | null;
   // eslint-disable-next-line no-cond-assign
   while ((m = noteRegex.exec(html)) !== null) {
     const raw = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    // Skip footer noise: if the text contains typical footer keywords, stop
     if (/OUR PARTNERS|Download the|Cookie Preferences|Formula One World/i.test(raw)) break;
     const note = "Note - " + raw.replace(/\.?$/, ".");
-    if (!seen.has(note)) {
-      seen.add(note);
-      notes.push(note);
-    }
+    notes.push(note);
   }
-  return notes.length > 0 ? notes.join("\n") : null;
+  return notes.length > 0 ? notes.join(" ") : null;
 }
 
 function extractGrandPrixTitle(html: string): string | null {

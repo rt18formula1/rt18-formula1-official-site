@@ -198,7 +198,7 @@ async function fetchResultFromF1Official(
     const pos = normalizePosition(row.position);
     const statusNote =
       row.timeOrRetired && /DNF|DNS|DSQ|NC/i.test(row.timeOrRetired) ? ` (${row.timeOrRetired})` : "";
-    return `${pos}: ${row.driverName}${statusNote}`;
+    return `${pos} ${row.driverName}${statusNote}`;
   });
 
   const data: SnsTemplateData = {
