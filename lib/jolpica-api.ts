@@ -59,10 +59,11 @@ class JolpicaApiClient {
   async fetchDriverStandings(year?: number): Promise<any> {
     try {
       const targetYear = year || new Date().getFullYear();
-      const response = await fetch(`/api/f1-jolpica?year=${targetYear}&type=drivers`);
+      const response = await fetch(`/api/f1-standings?year=${targetYear}&type=drivers`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      return data;
+      const json = await response.json();
+      return { data: { MRData: { StandingsTable: { StandingsLists: [{ DriverStandings: json.standings || [] }] } } } };
     } catch (error) {
       console.error('Error fetching driver standings:', error);
       throw error;
@@ -72,10 +73,11 @@ class JolpicaApiClient {
   async fetchConstructorStandings(year?: number): Promise<any> {
     try {
       const targetYear = year || new Date().getFullYear();
-      const response = await fetch(`/api/f1-jolpica?year=${targetYear}&type=constructors`);
+      const response = await fetch(`/api/f1-standings?year=${targetYear}&type=constructors`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      return data;
+      const json = await response.json();
+      return { data: { MRData: { StandingsTable: { StandingsLists: [{ ConstructorStandings: json.standings || [] }] } } } };
     } catch (error) {
       console.error('Error fetching constructor standings:', error);
       throw error;
