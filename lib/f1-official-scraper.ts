@@ -153,10 +153,10 @@ function extractNotes(html: string): string | null {
   while ((m = noteRegex.exec(html)) !== null) {
     const raw = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     if (/OUR PARTNERS|Download the|Cookie Preferences|Formula One World/i.test(raw)) break;
-    const note = "Note - " + raw.replace(/\.?$/, ".");
+    const note = raw.replace(/\.?$/, ".");
     notes.push(note);
   }
-  return notes.length > 0 ? notes.join(" ") : null;
+  return notes.length > 0 ? "Notes - " + notes.join(" ") : null;
 }
 
 function extractGrandPrixTitle(html: string): string | null {
