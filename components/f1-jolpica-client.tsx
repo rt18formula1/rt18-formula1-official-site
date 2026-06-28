@@ -128,7 +128,7 @@ export default function F1JolpicaClient() {
   // レースが選択されたときに詳細タブに切り替え
   useEffect(() => {
     if (selectedRace) {
-      setActiveTab('details');
+      // details tab removed;
     }
   }, [selectedRace]);
 
