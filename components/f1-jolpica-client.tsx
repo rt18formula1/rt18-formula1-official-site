@@ -232,12 +232,7 @@ export default function F1JolpicaClient() {
     }
   };
 
-    // タブがstandingsに切り替わったときにスタンディングスを取得
-  useEffect(() => {
-    if (activeTab === 'standings') {
-      fetchStandings();
-    }
-  }, [activeTab, selectedYear]);
+    // standings tab removed
 
   // 全データを取得
   const fetchAllData = async () => {
