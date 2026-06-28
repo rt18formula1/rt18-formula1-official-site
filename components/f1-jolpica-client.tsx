@@ -280,31 +280,7 @@ export default function F1JolpicaClient() {
     }
   };
 
-  // タブがalldataに切り替わったときに全データを取得
-  useEffect(() => {
-    if (activeTab === 'alldata') {
-      fetchAllData();
-    }
-  }, [activeTab, selectedYear]);
-
-  // レースが選択されたときにラップタイムとピットストップを再取得
-  useEffect(() => {
-    if (activeTab === 'alldata' && selectedRace) {
-      const fetchRaceSpecificData = async () => {
-        try {
-          const [laps, pitstops] = await Promise.all([
-            jolpicaApi.fetchLapTimes(selectedYear, selectedRace.round),
-            jolpicaApi.fetchPitStops(selectedYear, selectedRace.round)
-          ]);
-          setLapsData(laps);
-          setPitstopsData(pitstops);
-        } catch (error) {
-          console.log('Lap times and pit stops not available for this race');
-        }
-      };
-      fetchRaceSpecificData();
-    }
-  }, [selectedRace, activeTab, selectedYear]);
+  // alldata useEffects removed
 
   // セッションデータを取得
   const fetchSessionData = async () => {
