@@ -309,8 +309,6 @@ export default function F1JolpicaClient() {
     }
   };
   // details useEffects removed
-    }
-  }, [raceSessionTab]);
 
   if (loading) {
     return (
