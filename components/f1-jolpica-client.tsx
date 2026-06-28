@@ -308,18 +308,7 @@ export default function F1JolpicaClient() {
       setSessionLoading(false);
     }
   };
-
-  // レースが選択されたときにセッションデータを取得
-  useEffect(() => {
-    if (selectedRace && activeTab === 'details') {
-      fetchSessionData();
-    }
-  }, [selectedRace, activeTab, selectedYear]);
-
-  // セッションタブが切り替わったときにデータを再取得
-  useEffect(() => {
-    if (selectedRace && activeTab === 'details') {
-      fetchSessionData();
+  // details useEffects removed
     }
   }, [raceSessionTab]);
 
