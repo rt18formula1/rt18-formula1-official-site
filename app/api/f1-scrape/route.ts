@@ -68,9 +68,9 @@ export async function GET(request: Request) {
     if (!html) return NextResponse.json({ page, year, rows: [] });
     const raw = parseTable(html);
     const rows = raw.map(cells => ({
-      grandPrix: cleanName(cells[0] ?? "").replace(/Flag of [^A-Z]*/g,"").trim(),
+      grandPrix: (() => { const raw=cells[0]??""; const idx=raw.lastIndexOf("Flag of "); return idx>=0 ? cleanName(raw.slice(idx+"Flag of ".length)) : cleanName(raw); })(),
       date: cells[1] ?? "",
-      winner: cleanName(cells[2] ?? "").replace(/Flag of [^A-Z]*/g,"").trim(),
+      winner: (()=>{ const v=cells[2]??""; const i=v.lastIndexOf("Flag of "); return i>=0?cleanName(v.slice(i+"Flag of ".length)):cleanName(v); })(),
       team: cleanName(cells[3] ?? ""),
       laps: cells[4] ?? "",
       time: cells[5] ?? "",
@@ -86,7 +86,7 @@ export async function GET(request: Request) {
     const raw = parseTable(html);
     const rows = raw.map(cells => ({
       position: cells[0] ?? "",
-      driver: cleanName(cells[1] ?? "").replace(/Flag of [^A-Z]*/g,"").trim(),
+      driver: (()=>{ const v=cells[1]??""; const i=v.lastIndexOf("Flag of "); return i>=0?cleanName(v.slice(i+"Flag of ".length)):cleanName(v); })(),
       nationality: cells[2] ?? "",
       team: cleanName(cells[3] ?? ""),
       points: cells[4] ?? "",
