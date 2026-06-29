@@ -68,9 +68,9 @@ export async function GET(request: Request) {
     if (!html) return NextResponse.json({ page, year, rows: [] });
     const raw = parseTable(html);
     const rows = raw.map(cells => ({
-      grandPrix: cleanName(cells[0] ?? ""),
+      grandPrix: cleanName(cells[0] ?? "").replace(/Flag of [^A-Z]*/g,"").trim(),
       date: cells[1] ?? "",
-      winner: cleanName(cells[2] ?? ""),
+      winner: cleanName(cells[2] ?? "").replace(/Flag of [^A-Z]*/g,"").trim(),
       team: cleanName(cells[3] ?? ""),
       laps: cells[4] ?? "",
       time: cells[5] ?? "",
@@ -86,7 +86,7 @@ export async function GET(request: Request) {
     const raw = parseTable(html);
     const rows = raw.map(cells => ({
       position: cells[0] ?? "",
-      driver: cleanName(cells[1] ?? ""),
+      driver: cleanName(cells[1] ?? "").replace(/Flag of [^A-Z]*/g,"").trim(),
       nationality: cells[2] ?? "",
       team: cleanName(cells[3] ?? ""),
       points: cells[4] ?? "",
