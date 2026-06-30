@@ -84,9 +84,9 @@ export async function GET(request: Request) {
     if (!html) return NextResponse.json({ page, year, rows: [] });
     const raw = parseTable(html);
     const rows = raw.map(cells => ({
-      grandPrix: dedupeRepeatedWords(cleanName(cells[0] ?? "")).replace(/Flag of [^A-Z]*/g,"").trim(),
+      grandPrix: dedupeRepeatedWords(cleanName(cells[0] ?? "").replace(/Flag of [^A-Z]*/g,"").trim()),
       date: cells[1] ?? "",
-      winner: dedupeRepeatedWords(cleanName(cells[2] ?? "")).replace(/Flag of [^A-Z]*/g,"").trim(),
+      winner: dedupeRepeatedWords(cleanName(cells[2] ?? "").replace(/Flag of [^A-Z]*/g,"").trim()),
       team: cleanName(cells[3] ?? ""),
       laps: cells[4] ?? "",
       time: cells[5] ?? "",
