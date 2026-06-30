@@ -35,7 +35,23 @@ function parseTable(html: string): string[][] {
 }
 
 function cleanName(raw: string): string {
-  const m = raw.match(/^(.*?)([A-Z]{2,3})$/);
+  const m = raw.match(/^(.*?)([A-Z]{2,3}
+
+function dedupeRepeatedWords(s) {
+  for (let i = 1; i < s.length; i++) {
+    const a = s.slice(0, i);
+    const b = s.slice(i);
+    if (a === b && a.length > 0) return a;
+  }
+  const words = s.trim().split(/s+/);
+  const half = words.length / 2;
+  if (Number.isInteger(half) && half > 0) {
+    const first = words.slice(0, half).join(" ");
+    const second = words.slice(half).join(" ");
+    if (first === second) return first;
+  }
+  return s;
+})$/);
   if (m && m[1].trim().length > 0 && m[2].length <= 3) return m[1].trim();
   return raw.trim();
 }
@@ -68,7 +84,7 @@ export async function GET(request: Request) {
     if (!html) return NextResponse.json({ page, year, rows: [] });
     const raw = parseTable(html);
     const rows = raw.map(cells => ({
-      grandPrix: (() => { const raw=cells[0]??""; const idx=raw.lastIndexOf("Flag of "); return idx>=0 ? cleanName(raw.slice(idx+"Flag of ".length)) : cleanName(raw); })(),
+      grandPrix: (() => { const raw=cells[0]??""; const idx=raw.lastIndexOf("Flag of "); return idx>=0 ? dedupeRepeatedWords(cleanName(raw.slice(idx+"Flag of ".length))) : dedupeRepeatedWords(cleanName(raw)); })(),
       date: cells[1] ?? "",
       winner: (()=>{ const v=cells[2]??""; const i=v.lastIndexOf("Flag of "); return i>=0?cleanName(v.slice(i+"Flag of ".length)):cleanName(v); })(),
       team: cleanName(cells[3] ?? ""),
