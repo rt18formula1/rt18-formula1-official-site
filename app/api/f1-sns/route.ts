@@ -92,7 +92,9 @@ export async function POST(request: Request) {
 
     if (!force) {
       const cached = await getSnsCacheEntry(year, round, templateType);
-      if (cached) {
+      // Skip LLM-fallback cached data: re-fetch to get accurate official data
+      const isReliable = cached && cached.provider !== "openrouter";
+      if (isReliable) {
         return NextResponse.json({
           success: true,
           cached: true,
