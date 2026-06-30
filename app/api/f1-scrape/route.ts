@@ -41,19 +41,21 @@ function cleanName(raw: string): string {
 }
 
 function dedupeRepeatedWords(s: string): string {
-  for (let i = 1; i < s.length; i++) {
-    const a = s.slice(0, i);
-    const b = s.slice(i);
+  const trimmed = s.trim();
+  for (let i = 1; i < trimmed.length; i++) {
+    const a = trimmed.slice(0, i);
+    const b = trimmed.slice(i);
     if (a === b && a.length > 0) return a;
   }
-  const words = s.trim().split(/\s+/);
-  const half = words.length / 2;
-  if (Number.isInteger(half) && half > 0) {
-    const first = words.slice(0, half).join(' ');
-    const second = words.slice(half).join(' ');
-    if (first === second) return first;
+  const words = trimmed.split(/\s+/);
+  for (let take = 1; take < words.length; take++) {
+    const suffix = words.slice(words.length - take).join(' ');
+    const rest = words.slice(0, words.length - take).join(' ');
+    if (rest.endsWith(suffix)) {
+      return suffix;
+    }
   }
-  return s;
+  return trimmed;
 }
 
 export async function GET(request: Request) {
