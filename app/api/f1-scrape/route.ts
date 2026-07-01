@@ -63,20 +63,43 @@ export async function GET(request: Request) {
   const year = searchParams.get("year") ?? "2026";
   const page = searchParams.get("page") ?? "races";
 
-  // Schedule: use local calendar data (F1 official schedule page is not table-based)
+  // Schedule
   if (page === "schedule") {
-    const calendar = F1_2026_CALENDAR.filter(r => !r.cancelled);
-    const rows = calendar.map(r => ({
-      round: r.round,
-      grandPrix: r.officialName,
-      circuit: r.circuit,
-      city: r.city,
-      country: r.country,
-      dates: r.dates,
-      raceDate: r.raceDate,
-      hasSprint: r.hasSprint,
-    }));
-    return NextResponse.json({ page: "schedule", year, rows });
+    const numYear = parseInt(year, 10);
+    if (numYear === 2026) {
+      // Use local calendar for current season
+      const calendar = F1_2026_CALENDAR.filter(r => !r.cancelled);
+      const rows = calendar.map(r => ({
+        round: r.round,
+        grandPrix: r.officialName,
+        circuit: r.circuit,
+        city: r.city,
+        country: r.country,
+        dates: r.dates,
+        raceDate: r.raceDate,
+        hasSprint: r.hasSprint,
+      }));
+      return NextResponse.json({ page: "schedule", year, rows, source: "local" });
+    } else {
+      // Fetch from official results page for other seasons
+      const url = `${BASE}/results/${year}/races`;
+      const html = await fetchHtml(url);
+      if (!html) return NextResponse.json({ page: "schedule", year, rows: [] });
+      const raw = parseTable(html);
+      const rows = raw.map((cells, i) => ({
+        round: i + 1,
+        grandPrix: dedupeRepeatedWords(cleanName(cells[0] ?? "").replace(/Flag of [^A-Z]*/g, "").trim()),
+        circuit: "",
+        city: "",
+        country: dedupeRepeatedWords(cleanName(cells[0] ?? "").replace(/Flag of [^A-Z]*/g, "").trim()),
+        dates: cells[1] ?? "",
+        raceDate: cells[1] ?? "",
+        hasSprint: false,
+        winner: dedupeRepeatedWords(cleanName(cells[2] ?? "").replace(/Flag of [^A-Z]*/g, "").trim()),
+        team: cleanName(cells[3] ?? ""),
+      })).filter(r => r.grandPrix && r.dates && !/^\s*$/.test(r.dates));
+      return NextResponse.json({ page: "schedule", year, rows, source: "f1-official" });
+    }
   }
 
   // Races
