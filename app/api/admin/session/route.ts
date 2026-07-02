@@ -1,10 +1,16 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabaseServer";
 
-const COOKIE = "rt18_admin";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const ok = cookieStore.get(COOKIE)?.value === "1";
+  if (!ADMIN_EMAIL) {
+    return NextResponse.json({ ok: false });
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const ok = !!user && user.email === ADMIN_EMAIL;
   return NextResponse.json({ ok });
 }

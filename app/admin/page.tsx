@@ -47,6 +47,7 @@ import { ShopAdminTab } from "@/components/shop/shop-admin-tab";
 
 export default function AdminPage() {
   const [sessionOk, setSessionOk] = useState(false);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -142,7 +143,7 @@ export default function AdminPage() {
       method: "POST",
       headers: { "content-type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ email, password }),
     });
     if (!res.ok) {
       const payload = await res.json().catch(() => null);
@@ -323,11 +324,20 @@ const handleAlbumCreate = (name: string, type: "backnumber" | "portfolio") => {
         <SiteHeader />
         <div className="container mx-auto px-4 py-12 max-w-md">
           <h1 className="text-3xl font-black mb-6">Admin</h1>
+          <label className="block text-sm font-semibold mb-2">Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-2 border border-black/20 rounded-lg mb-4"
+            placeholder="admin@example.com"
+          />
           <label className="block text-sm font-semibold mb-2">Password</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && login()}
             className="w-full px-4 py-2 border border-black/20 rounded-lg mb-4"
           />
           {error ? <p className="text-sm mb-4 text-red-500">{error}</p> : null}

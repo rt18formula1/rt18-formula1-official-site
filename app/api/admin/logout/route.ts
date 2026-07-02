@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-
-const COOKIE = "rt18_admin";
+import { createClient } from "@/lib/supabaseServer";
 
 export async function POST() {
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(COOKIE, "", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 0 });
-  return res;
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  return NextResponse.json({ ok: true });
 }

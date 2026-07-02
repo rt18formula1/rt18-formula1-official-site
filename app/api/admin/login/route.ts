@@ -1,34 +1,30 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabaseServer";
 
-const COOKIE = "rt18_admin";
-
-function expectedPassword() {
-  return process.env.RT18_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
-}
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => null)) as { password?: string } | null;
+  const body = (await request.json().catch(() => null)) as { email?: string; password?: string } | null;
+  const email = body?.email ?? "";
   const password = body?.password ?? "";
 
-  const expected = expectedPassword();
-  if (!expected) {
+  if (!ADMIN_EMAIL) {
     return NextResponse.json(
-      { ok: false, error: "RT18_ADMIN_PASSWORD or ADMIN_PASSWORD is not configured" },
+      { ok: false, error: "ADMIN_EMAIL is not configured" },
       { status: 500 },
     );
   }
 
-  if (password !== expected) {
-    return NextResponse.json({ ok: false }, { status: 401 });
+  if (email !== ADMIN_EMAIL) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(COOKIE, "1", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-  return res;
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error || !data.session) {
+    return NextResponse.json({ ok: false, error: error?.message ?? "Login failed" }, { status: 401 });
+  }
+
+  return NextResponse.json({ ok: true });
 }
