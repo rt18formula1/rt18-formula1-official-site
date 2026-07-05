@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { F1_2026_CALENDAR } from "@/lib/f1-data-constants";
+import { getCalendarForYear, getCalendarLinksForYear } from "@/lib/f1-calendar-data";
 
 type ScrapeTab = "schedule" | "races" | "drivers" | "teams";
 
@@ -25,36 +26,78 @@ export default function F1ScrapeTab({ tab, year, data, loading, onLoad }: Props)
   if (loading) return <div className="text-center py-16 text-gray-400">Loading...</div>;
   if (!data) return <div className="text-center py-16 text-gray-400">No data</div>;
 
-  // Schedule: use local calendar
+  // Schedule: static data for 2018-2025, F1_2026_CALENDAR for 2026, iCal links for 2027+
   if (tab === "schedule") {
-    const rows = F1_2026_CALENDAR;
+    const historicRows = getCalendarForYear(year);
+    const rows = year <= 2025 ? historicRows : year === 2026 ? F1_2026_CALENDAR : null;
+    const calLinks = getCalendarLinksForYear(year);
+
     return (
       <div>
         <h2 className="text-xl font-bold mb-4">{year} Season Schedule</h2>
-        <div className="overflow-x-auto">
-          <table className={tabClass}>
-            <thead>
-              <tr>
-                <th className={thClass}>Round</th>
-                <th className={thClass}>Grand Prix</th>
-                <th className={thClass}>Circuit</th>
-                <th className={thClass}>Dates</th>
-                <th className={thClass}>Sprint</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(r => (
-                <tr key={r.round} className={r.cancelled ? "opacity-40" : "hover:bg-gray-50"}>
-                  <td className={tdClass + " text-gray-500"}>{r.round}</td>
-                  <td className={tdClass + " font-medium"}>{r.country}{r.cancelled ? " ✕" : ""}</td>
-                  <td className={tdClass + " text-gray-600"}>{r.circuit}</td>
-                  <td className={tdClass}>{r.dates}</td>
-                  <td className={tdClass + " text-center"}>{r.hasSprint ? "🏎" : ""}</td>
+
+        {/* Calendar registration panel for seasons with iCal/gcal URL */}
+        {calLinks && (
+          <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-700">カレンダーに登録</p>
+              {calLinks.note && <p className="text-xs text-gray-500 mt-0.5">{calLinks.note}</p>}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {calLinks.gcal && (
+                <a
+                  href={calLinks.gcal}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  📅 Google カレンダー
+                </a>
+              )}
+              {calLinks.ical && (
+                <a
+                  href={calLinks.ical}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-white text-xs font-semibold rounded-lg hover:bg-gray-900 transition-colors"
+                >
+                  📆 iCal / Apple カレンダー
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {rows ? (
+          <div className="overflow-x-auto">
+            <table className={tabClass}>
+              <thead>
+                <tr>
+                  <th className={thClass}>Round</th>
+                  <th className={thClass}>Grand Prix</th>
+                  <th className={thClass}>Circuit</th>
+                  <th className={thClass}>Dates</th>
+                  <th className={thClass}>Sprint</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map(r => (
+                  <tr key={r.round} className={r.cancelled ? "opacity-40" : "hover:bg-gray-50"}>
+                    <td className={tdClass + " text-gray-500"}>{r.round}</td>
+                    <td className={tdClass + " font-medium"}>{r.country}{r.cancelled ? " ✕" : ""}</td>
+                    <td className={tdClass + " text-gray-600"}>{r.circuit}</td>
+                    <td className={tdClass}>{r.dates}</td>
+                    <td className={tdClass + " text-center"}>{r.hasSprint ? "🏎" : ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-16 text-gray-400">
+            <p className="text-lg mb-2">📅</p>
+            <p className="font-medium">{year}年のカレンダーデータは未登録です</p>
+            <p className="text-sm mt-1">公式サイトでiCal URLが公開され次第、lib/f1-calendar-data.ts の F1_CALENDAR_LINKS に追記してください</p>
+          </div>
+        )}
       </div>
     );
   }
