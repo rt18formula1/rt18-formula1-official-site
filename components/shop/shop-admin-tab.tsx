@@ -24,6 +24,8 @@ export function ShopAdminTab() {
   const [commissions, setCommissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"products"|"orders"|"commissions">("products");
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -81,8 +83,7 @@ export function ShopAdminTab() {
   };
 
   const updateOrderStatus = async (id:string,status:string) => {
-    if (!supabase) return;
-    await supabase.from("orders").update({status}).eq("id",id);
+    await fetch("/api/admin/orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) });
     setOrders(prev=>prev.map(o=>o.id===id?{...o,status}:o));
   };
 
@@ -92,6 +93,25 @@ export function ShopAdminTab() {
     setCommissions(prev=>prev.map(c=>c.id===id?{...c,status}:c));
   };
 
+  const exportOrdersCSV = () => {
+    const q = orderSearch.toLowerCase();
+    const rows = orders.filter((o: any) => {
+      const ms = !q || o.id.includes(q) || (o.shipping_name || "").toLowerCase().includes(q);
+      const mf = !orderStatusFilter || o.status === orderStatusFilter;
+      return ms && mf;
+    });
+    const hdr = ["ID","Date","Name","Status","Total","Items"].join(",");
+    const lines = rows.map((o: any) => {
+      const items = (o.order_items || []).map((i: any) => (i.products?.name_en || i.products?.name_ja || "?") + "x" + i.quantity).join(" / ");
+      return [o.id.slice(0,8).toUpperCase(), new Date(o.created_at).toLocaleDateString("ja-JP"), o.shipping_name || "", o.status || "", o.total_price || 0, items].map((v: any) => String(v).replace(/,/g, "")).join(",");
+    });
+    const csv = [hdr, ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "orders_" + new Date().toISOString().slice(0,10) + ".csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
   if (loading) return <div className="py-8 text-center text-gray-400 text-sm">Loading...</div>;
 
   return (
@@ -203,8 +223,27 @@ export function ShopAdminTab() {
 
       {tab==="orders" && (
         <div className="space-y-3">
-          {orders.length===0 ? <p className="text-center py-8 text-gray-400 text-sm">No orders yet</p> :
-            orders.map(o=><OrderCard key={o.id} order={o} onStatusChange={updateOrderStatus}/>)}
+          <div className="flex flex-col sm:flex-row gap-2 mb-2">
+            <input type="text" placeholder="Search ID / name..." value={orderSearch} onChange={e=>setOrderSearch(e.target.value)}
+              className="flex-1 px-3 py-2 border border-black/10 rounded-xl text-sm font-bold focus:outline-none focus:border-black"/>
+            <select value={orderStatusFilter} onChange={e=>setOrderStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-black/10 rounded-xl text-sm font-bold bg-white appearance-none focus:outline-none focus:border-black">
+              <option value="">All statuses</option>
+              {ORDER_STATUSES.map(s=><option key={s} value={s}>{s.replace(/_/g," ")}</option>)}
+            </select>
+            <button onClick={exportOrdersCSV} className="px-4 py-2 bg-black text-white rounded-xl text-xs font-bold hover:bg-gray-900 whitespace-nowrap">CSV Export</button>
+          </div>
+          {(()=>{
+            const q=orderSearch.toLowerCase();
+            const filtered=orders.filter((o:any)=>{
+              const ms=!q||o.id.includes(q)||(o.shipping_name||"").toLowerCase().includes(q);
+              const mf=!orderStatusFilter||o.status===orderStatusFilter;
+              return ms&&mf;
+            });
+            return filtered.length===0
+              ? <p className="text-center py-8 text-gray-400 text-sm">{orders.length===0?"No orders yet":"No orders match"}</p>
+              : filtered.map((o:any)=><OrderCard key={o.id} order={o} onStatusChange={updateOrderStatus}/>);
+          })()}
             {false && orders.map(o=>(
               <div key={o.id} className="border border-black/10 rounded-xl p-5 space-y-3">
                 <div className="flex items-start justify-between">
