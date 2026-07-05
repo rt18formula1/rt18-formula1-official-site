@@ -32,6 +32,7 @@ export default function MyPage() {
   const [activateCodes, setActivateCodes] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"orders" | "commissions" | "profile">("orders");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Edit state
   const [editing, setEditing] = useState(false);
@@ -132,6 +133,13 @@ export default function MyPage() {
     if (!supabase) return;
     await supabase.auth.signOut();
     router.push("/shop");
+  };
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(key);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
   };
 
   if (loading) return (
@@ -236,8 +244,23 @@ export default function MyPage() {
                     <div className="mt-4 grid gap-3 border-t border-black/5 pt-4 text-sm text-gray-600 md:grid-cols-2">
                       {order.tracking_number && (
                         <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Tracking Number</p>
-                          <p className="font-bold text-black">{order.tracking_number}</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Tracking Number</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-mono font-bold text-black">{order.tracking_number}</p>
+                            <button
+                              onClick={() => copyToClipboard(order.tracking_number, order.id + '_tracking')}
+                              className="text-[10px] font-black px-2 py-0.5 border border-black/20 rounded-md hover:border-black transition-colors"
+                            >
+                              {copiedId === order.id + '_tracking' ? '✓ Copied' : 'Copy'}
+                            </button>
+                          </div>
+                          <a
+                            href={'https://trackings.post.japanpost.jp/services/srv/search/?requestNo=' + order.tracking_number}
+                            target="_blank" rel="noopener noreferrer"
+                            className="text-[10px] font-bold text-blue-500 hover:underline mt-0.5 inline-block"
+                          >
+                            Track Package →
+                          </a>
                         </div>
                       )}
                       {order.shipping_address_line1 && (

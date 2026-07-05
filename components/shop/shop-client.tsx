@@ -1,8 +1,8 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useCart } from "./cart-context";
 
 type Product = {
   id: string;
@@ -21,14 +21,23 @@ const TYPE_COLORS: Record<string, string> = {
   skill: "bg-purple-100 text-purple-700",
 };
 
+const TYPE_LABELS: Record<string, string> = {
+  digital: "Digital",
+  physical: "Goods",
+  skill: "Skill",
+};
+
 export function ShopClient() {
+  const { totalCount } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [lang, setLang] = useState<"ja" | "en">("ja");
   const [user, setUser] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const stored = localStorage.getItem("language");
     if (stored === "en") setLang("en");
     if (supabase) {
@@ -39,7 +48,6 @@ export function ShopClient() {
   useEffect(() => {
     const fetchProducts = async () => {
       if (!supabase) { setLoading(false); return; }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query: any = supabase.from("products").select("*").eq("status", "on_sale");
       if (filter !== "all") query = query.eq("type", filter);
       const { data, error } = await query.order("sort_order", { ascending: true });
@@ -50,24 +58,24 @@ export function ShopClient() {
   }, [filter]);
 
   const filters = [
-    { value: "all", label: "All" },
-    { value: "digital", label: "Digital" },
-    { value: "physical", label: "Goods" },
-    { value: "skill", label: "Skill" },
+    { value: "all", label: "All", icon: "◎" },
+    { value: "digital", label: "Digital", icon: "⚡" },
+    { value: "physical", label: "Goods", icon: "📦" },
+    { value: "skill", label: "Skill", icon: "🎨" },
   ];
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
       {/* Header */}
-      <div className="flex items-start justify-between mb-12">
+      <div className="flex items-start justify-between mb-10">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter mb-2">Shop</h1>
-          <p className="text-gray-500 text-sm">Digital contents, goods, and illustration commissions</p>
+          <h1 className="text-4xl font-black tracking-tighter mb-1">Shop</h1>
+          <p className="text-gray-400 text-sm">Digital contents, goods &amp; commissions</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {user ? (
             <Link href="/shop/mypage"
-              className="flex items-center gap-2 px-4 py-2 border border-black/20 rounded-xl text-sm font-bold hover:border-black hover:bg-black hover:text-white transition-all">
+              className="flex items-center gap-1.5 px-3 py-2 border border-black/20 rounded-xl text-sm font-bold hover:border-black hover:bg-black hover:text-white transition-all">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
@@ -75,40 +83,45 @@ export function ShopClient() {
             </Link>
           ) : (
             <Link href="/shop/auth/login"
-              className="px-4 py-2 border border-black/20 rounded-xl text-sm font-bold hover:border-black transition-all">
+              className="px-3 py-2 border border-black/20 rounded-xl text-sm font-bold hover:border-black transition-all">
               Login
             </Link>
           )}
           <Link href="/shop/cart"
-            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-900 transition-all">
+            className="relative flex items-center gap-1.5 px-3 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-900 transition-all">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
             Cart
+            {mounted && totalCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">
+                {totalCount > 9 ? "9+" : totalCount}
+              </span>
+            )}
           </Link>
         </div>
       </div>
 
       {/* Commission Banner */}
       <Link href="/shop/commission"
-        className="block mb-10 bg-black text-white rounded-2xl p-8 hover:bg-gray-900 transition-colors">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Illustration Commission</p>
-            <h2 className="text-2xl font-black">Order Original Illustration</h2>
-            <p className="text-gray-400 text-sm mt-2">Custom F1 driver, car, and team illustrations made to order</p>
-          </div>
-          <span className="text-4xl">&#8594;</span>
+        className="flex items-center justify-between mb-8 bg-black text-white rounded-2xl px-6 py-4 hover:bg-gray-900 transition-colors group">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Illustration Commission</p>
+          <h2 className="text-base font-black">Order Original Illustration →</h2>
         </div>
+        <span className="text-2xl group-hover:translate-x-1 transition-transform">🏎️</span>
       </Link>
 
       {/* Filters */}
-      <div className="flex gap-3 mb-8 flex-wrap">
+      <div className="flex gap-2 mb-8 flex-wrap">
         {filters.map((f) => (
           <button key={f.value} onClick={() => setFilter(f.value)}
-            className={`px-5 py-2 rounded-full text-sm font-bold border transition-all ${
-              filter === f.value ? "bg-black text-white border-black" : "bg-white text-black border-black/20 hover:border-black"
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold border transition-all ${
+              filter === f.value
+                ? "bg-black text-white border-black shadow-md"
+                : "bg-white text-black border-black/15 hover:border-black/40"
             }`}>
+            <span className="text-base leading-none">{f.icon}</span>
             {f.label}
           </button>
         ))}
@@ -127,35 +140,36 @@ export function ShopClient() {
         </div>
       ) : products.length === 0 ? (
         <div className="text-center py-24 text-gray-400">
+          <p className="text-4xl mb-4">🏁</p>
           <p className="font-bold text-lg mb-2">Coming soon</p>
           <p className="text-sm">Products will be available soon.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {products.map((product) => (
             <Link key={product.id} href={`/shop/${product.id}`} className="group">
-              <div className="relative aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-3">
+              <div className="relative aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-3 border border-black/5">
                 {product.image_url ? (
                   <img src={product.image_url} alt={lang === "ja" ? product.name_ja : product.name_en}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs font-bold">
+                  <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs font-black">
                     {(product.type || "item").toUpperCase()}
                   </div>
                 )}
-                <span className={`absolute top-3 left-3 text-xs font-bold px-2 py-1 rounded-full ${TYPE_COLORS[product.type] || "bg-gray-100 text-gray-700"}`}>
-                  {product.type}
+                <span className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${TYPE_COLORS[product.type] || "bg-gray-100 text-gray-700"}`}>
+                  {TYPE_LABELS[product.type] || product.type}
                 </span>
                 {product.status === "sold_out" && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <span className="text-white font-black text-sm">SOLD OUT</span>
+                    <span className="text-white font-black text-xs tracking-widest">SOLD OUT</span>
                   </div>
                 )}
               </div>
-              <h3 className="font-bold text-sm leading-tight mb-1 group-hover:underline">
+              <h3 className="font-bold text-sm leading-tight mb-1 group-hover:underline line-clamp-2">
                 {lang === "ja" ? product.name_ja : product.name_en}
               </h3>
-              <p className="font-black text-sm">{String.fromCharCode(165)}{product.price.toLocaleString()}</p>
+              <p className="font-black text-sm">&yen;{product.price.toLocaleString()}</p>
             </Link>
           ))}
         </div>
