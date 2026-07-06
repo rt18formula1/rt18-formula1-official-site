@@ -160,15 +160,21 @@ export function InquiryClient() {
                   <label htmlFor="subject" className="block text-sm font-bold text-gray-700">
                     {t.subject}
                   </label>
-                  <input
-                    type="text"
+                  <select
                     id="subject"
                     name="subject"
                     value={formData.subject}
-                    onChange={handleChange}
-                    placeholder={t.subjectPlaceholder}
-                    className="w-full px-4 py-3 bg-gray-50 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                  />
+                    onChange={handleChange as any}
+                    className="w-full px-4 py-3 bg-gray-50 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all appearance-none"
+                  >
+                    <option value="">{lang === 'ja' ? '選択してください' : 'Select a topic'}</option>
+                    <option value="Order inquiry">{lang === 'ja' ? 'ご注文について' : 'Order inquiry'}</option>
+                    <option value="Shipping inquiry">{lang === 'ja' ? '発送・配送について' : 'Shipping inquiry'}</option>
+                    <option value="Product question">{lang === 'ja' ? '商品について' : 'Product question'}</option>
+                    <option value="Commission request">{lang === 'ja' ? 'コミッションについて' : 'Commission request'}</option>
+                    <option value="Payment issue">{lang === 'ja' ? 'お支払いについて' : 'Payment issue'}</option>
+                    <option value="Other">{lang === 'ja' ? 'その他' : 'Other'}</option>
+                  </select>
                 </div>
               </div>
 

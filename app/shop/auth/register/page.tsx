@@ -48,7 +48,13 @@ export default function RegisterPage() {
       email, password,
       options: { emailRedirectTo: `${window.location.origin}/shop/auth/callback` },
     });
-    if (signUpError) { setError(signUpError.message); setLoading(false); return; }
+    if (signUpError) {
+      const msg = signUpError.message;
+      setError(msg.includes('already registered') || msg.includes('already been registered') || msg.includes('User already registered')
+        ? 'This email is already registered. Please sign in instead.'
+        : msg);
+      setLoading(false); return;
+    }
     if (data.user) {
       const finalDisplayId = displayId || `anon_${Math.random().toString(36).slice(2, 8)}`;
       await supabase.from("user_profiles").insert({
@@ -89,6 +95,7 @@ export default function RegisterPage() {
           </Link>
           <h1 className="text-3xl font-black tracking-tighter">Create Account</h1>
           <div className="flex items-center justify-center gap-2 mt-6">
+            {/* step indicator: account / profile / address / agree */}
             {steps.map((s, i) => (
               <div key={s} className={`h-1.5 rounded-full transition-all ${
                 step === s ? "w-8 bg-black" : steps.indexOf(step) > i ? "w-4 bg-black/30" : "w-4 bg-black/10"
@@ -216,6 +223,10 @@ export default function RegisterPage() {
             </div>
             <div className="flex gap-3 pt-2">
               <button onClick={() => setStep("profile")} className="flex-1 border border-black/20 rounded-xl py-3 text-sm font-bold hover:border-black transition-colors">Back</button>
+              <button onClick={() => setStep('agree')}
+                className="flex-1 border border-black/20 rounded-xl py-3 text-sm font-bold text-gray-400 hover:border-black hover:text-black transition-colors">
+                Skip (Digital only)
+              </button>
               <button onClick={() => setStep("agree")} disabled={!postalCode || !prefecture || !city || !addressLine1}
                 className="flex-1 bg-black text-white rounded-xl py-3 text-sm font-bold hover:bg-gray-900 transition-colors disabled:opacity-50">Next</button>
             </div>
