@@ -18,9 +18,11 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user || user.id !== userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user) {
+      console.error("[checkout] No session. authError:", authError?.message);
+      return NextResponse.json({ error: "Please log in again to complete checkout." }, { status: 401 });
     }
+    const verifiedUserId = user.id;
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: "No items" }, { status: 400 });
@@ -43,22 +45,22 @@ export async function POST(request: Request) {
       return { item, product };
     });
 
-    const missingProducts = resolvedItems.filter(({ product }) => !product);
+    const missingProducts = resolvedItems.filter(({ product }: any) => !product);
     if (missingProducts.length > 0) {
       return NextResponse.json({ error: "Some products were not found. Please refresh your cart." }, { status: 400 });
     }
 
-    const invalidPrices = resolvedItems.filter(({ product }) => !product || typeof product.price !== "number" || product.price <= 0);
+    const invalidPrices = resolvedItems.filter(({ product }: any) => !product || typeof product.price !== "number" || product.price <= 0);
     if (invalidPrices.length > 0) {
       return NextResponse.json({ error: "Invalid product price detected." }, { status: 400 });
     }
 
-    const isPhysical = resolvedItems.some(({ product }) => product.type === "physical");
+    const isPhysical = resolvedItems.some(({ product }: any) => product.type === "physical");
 
     // Upsert shipping profile if physical
     if (shipping && isPhysical) {
       const profileUpdate = {
-        id: userId,
+        id: verifiedUserId,
         last_name: cleanText(shipping.lastName),
         first_name: cleanText(shipping.firstName),
         postal_code: cleanText(shipping.postalCode),
@@ -78,7 +80,7 @@ export async function POST(request: Request) {
 
     const origin = request.headers.get("origin") || "https://rt18-formula1-official-site.vercel.app";
 
-    const line_items = resolvedItems.map(({ item, product }) => ({
+    const line_items = resolvedItems.map(({ item, product }: any) => ({
       price_data: {
         currency: "jpy",
         unit_amount: Math.round(Number(product.price)),
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
     }));
 
     const cartQuantities = resolvedItems
-      .map(({ item }) => `${item.id}:${Math.round(Number(item.quantity) || 1)}`)
+      .map(({ item }: any) => `${item.id}:${Math.round(Number(item.quantity) || 1)}`)
       .join(",");
 
     // Stripe metadata: values must be <= 500 chars
@@ -105,7 +107,7 @@ export async function POST(request: Request) {
       success_url: `${origin}/shop/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/shop/cart`,
       metadata: {
-        user_id: userId,
+        user_id: verifiedUserId,
         item_ids: itemIds.join(",").slice(0, 500),
         cart_quantities: cartQuantities.slice(0, 500),
         shipping_name: metaShippingName.slice(0, 100),
