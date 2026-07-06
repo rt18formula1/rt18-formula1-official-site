@@ -21,34 +21,42 @@ export async function POST(request: Request) {
     if (authError || !user || user.id !== userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
     if (!items || items.length === 0) {
       return NextResponse.json({ error: "No items" }, { status: 400 });
     }
 
     const supabaseAdmin = getSupabaseAdmin();
     const itemIds = items.map((i: any) => i.id);
+
     const { data: dbProducts, error: dbError } = await supabaseAdmin
       .from("products").select("*").in("id", itemIds);
 
     if (dbError || !dbProducts || dbProducts.length === 0) {
-      return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
+      console.error("[checkout] DB error:", dbError);
+      return NextResponse.json({ error: "Failed to fetch products from database" }, { status: 500 });
     }
 
-    let totalAmount = 0;
-    items.forEach((item: any) => {
-      const p = dbProducts.find((p: any) => p.id === item.id);
-      if (p) totalAmount += p.price * item.quantity;
+    // Validate all items can be found and have valid prices
+    const resolvedItems = items.map((item: any) => {
+      const product = dbProducts.find((p: any) => p.id === item.id);
+      return { item, product };
     });
-    if (totalAmount === 0) return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
 
-    const cartItems = items
-      .map((item: any) => {
-        const product = dbProducts.find((p: any) => p.id === item.id);
-        return product ? { id: product.id, quantity: Math.max(1, Number(item.quantity) || 1) } : null;
-      })
-      .filter(Boolean);
+    const missingProducts = resolvedItems.filter(({ product }) => !product);
+    if (missingProducts.length > 0) {
+      return NextResponse.json({ error: "Some products were not found. Please refresh your cart." }, { status: 400 });
+    }
 
-    if (shipping) {
+    const invalidPrices = resolvedItems.filter(({ product }) => !product || typeof product.price !== "number" || product.price <= 0);
+    if (invalidPrices.length > 0) {
+      return NextResponse.json({ error: "Invalid product price detected." }, { status: 400 });
+    }
+
+    const isPhysical = resolvedItems.some(({ product }) => product.type === "physical");
+
+    // Upsert shipping profile if physical
+    if (shipping && isPhysical) {
       const profileUpdate = {
         id: userId,
         last_name: cleanText(shipping.lastName),
@@ -63,49 +71,71 @@ export async function POST(request: Request) {
       const { error: profileError } = await supabaseAdmin
         .from("user_profiles")
         .upsert(profileUpdate, { onConflict: "id" });
-
       if (profileError) {
-        console.error("Profile upsert error:", profileError);
+        console.error("[checkout] Profile upsert error:", profileError);
       }
     }
 
     const origin = request.headers.get("origin") || "https://rt18-formula1-official-site.vercel.app";
 
-    const session = await stripe.checkout.sessions.create({
+    const line_items = resolvedItems.map(({ item, product }) => ({
+      price_data: {
+        currency: "jpy",
+        unit_amount: Math.round(Number(product.price)),
+        product_data: {
+          name: product.name_en || product.name_ja || "Product",
+          ...(product.image_url ? { images: [product.image_url] } : {}),
+        },
+      },
+      quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
+    }));
+
+    const cartQuantities = resolvedItems
+      .map(({ item }) => `${item.id}:${Math.round(Number(item.quantity) || 1)}`)
+      .join(",");
+
+    // Stripe metadata: values must be <= 500 chars
+    const metaShippingName = shipping
+      ? `${cleanText(shipping.lastName)} ${cleanText(shipping.firstName)}`.trim()
+      : "";
+
+    const sessionParams: any = {
       mode: "payment",
-      line_items: items.map((item: any) => {
-        const p = dbProducts.find((p: any) => p.id === item.id);
-        return {
-          price_data: {
-            currency: "jpy",
-            unit_amount: p.price,
-            product_data: {
-              name: p.name_en || p.name_ja,
-              images: p.image_url ? [p.image_url] : [],
-            },
-          },
-          quantity: item.quantity,
-        };
-      }),
+      line_items,
       success_url: `${origin}/shop/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/shop/cart`,
       metadata: {
         user_id: userId,
-        item_ids: itemIds.join(","),
-        cart_quantities: cartItems.map((item: any) => `${item.id}:${item.quantity}`).join(","),
-        shipping_name: shipping ? `${shipping.lastName} ${shipping.firstName}`.trim() : "",
-        shipping_postal_code: shipping?.postalCode || "",
-        shipping_prefecture: shipping?.prefecture || "",
-        shipping_city: shipping?.city || "",
-        shipping_address_line1: shipping?.address1 || "",
-        shipping_address_line2: shipping?.address2 || "",
-        shipping_country: shipping?.country || "Japan",
+        item_ids: itemIds.join(",").slice(0, 500),
+        cart_quantities: cartQuantities.slice(0, 500),
+        shipping_name: metaShippingName.slice(0, 100),
+        shipping_postal_code: (shipping?.postalCode ?? "").slice(0, 20),
+        shipping_prefecture: (shipping?.prefecture ?? "").slice(0, 50),
+        shipping_city: (shipping?.city ?? "").slice(0, 100),
+        shipping_address_line1: (shipping?.address1 ?? "").slice(0, 200),
+        shipping_address_line2: (shipping?.address2 ?? "").slice(0, 200),
+        shipping_country: (shipping?.country ?? "Japan").slice(0, 50),
       },
-    });
+    };
+
+    // Collect shipping in Stripe for physical goods
+    if (isPhysical) {
+      sessionParams.shipping_address_collection = {
+        allowed_countries: ["JP", "US", "GB", "AU", "CA", "FR", "DE", "IT", "ES", "NL", "BE", "SG", "CN", "KR", "TW", "HK"],
+      };
+    }
+
+    console.log("[checkout] creating stripe session, items:", line_items.length, "physical:", isPhysical);
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    console.log("[checkout] session created:", session.id);
 
     return NextResponse.json({ url: session.url });
+
   } catch (err: any) {
-    console.error("Stripe error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("[checkout] Stripe error:", err?.message, err?.type, err?.code);
+    const userMessage = err?.type === "StripeInvalidRequestError"
+      ? `Payment setup error: ${err.message}`
+      : "Failed to create checkout session. Please try again.";
+    return NextResponse.json({ error: userMessage }, { status: 500 });
   }
 }

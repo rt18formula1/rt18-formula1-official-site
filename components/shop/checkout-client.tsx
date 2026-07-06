@@ -84,7 +84,7 @@ export function CheckoutClient() {
 
   const handleCheckout = async () => {
     setCheckoutError("");
-    if (!canCheckout && !isAllDigital) {
+    if (!isAllDigital && !canCheckout) {
       setCheckoutError("Please complete the required shipping fields before continuing.");
       return;
     }
@@ -96,13 +96,19 @@ export function CheckoutClient() {
         body: JSON.stringify({ items, userId: user?.id, shipping: isAllDigital ? null : shipping }),
       });
       const data = await res.json();
+      console.log("[checkout] response:", res.status, data);
       if (data.url) {
         window.location.href = data.url;
-      } else if (data.error) {
-        setCheckoutError(data.error);
+        return; // prevent finally from resetting loading
       }
-    } catch (err) {
-      setCheckoutError("Failed to initiate checkout.");
+      // Error path
+      const msg = data.error || `Server error (${res.status})`;
+      setCheckoutError(msg);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err: any) {
+      console.error("[checkout] fetch error:", err);
+      setCheckoutError(err?.message || "Failed to initiate checkout. Please try again.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setLoading(false);
     }
