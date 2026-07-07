@@ -16,6 +16,8 @@ export default function SuccessPage() {
       setPurchasedItems([...items]);
       setPurchasedTotal(totalPrice);
       clearCart();
+      // Belt-and-suspenders: directly nuke localStorage in case state update races
+      try { localStorage.removeItem("rt18_cart"); } catch {}
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
