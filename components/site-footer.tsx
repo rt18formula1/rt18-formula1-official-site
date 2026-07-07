@@ -21,10 +21,10 @@ export function SiteFooter() {
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center transition-all shadow-sm"
+                  className="group w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center transition-all shadow-sm hover:bg-white/15 hover:scale-110"
                   title={link.name}
                 >
-                  <img src={link.icon} alt={link.name} className="w-7 h-7 object-contain opacity-80" />
+                  <img src={link.icon} alt={link.name} width={28} height={28} className="w-7 h-7 object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
                 </a>
               ))}
             </div>
@@ -40,6 +40,8 @@ export function SiteFooter() {
                 <li><Link href="/news" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">News</Link></li>
                 <li><Link href="/portfolio" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">Portfolio</Link></li>
                 <li><Link href="/calendar" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">Calendar</Link></li>
+                <li><Link href="/f1-database" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">F1 DB</Link></li>
+                <li><Link href="/f1-database" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">F1 DB</Link></li>
               </ul>
             </div>
             <div>

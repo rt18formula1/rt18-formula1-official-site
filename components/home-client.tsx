@@ -67,6 +67,8 @@ export default function HomeClient({
     setCarouselIndex(idx);
     startTimer();
   };
+  const goPrev = () => goTo((carouselIndex - 1 + carouselItems.length) % carouselItems.length);
+  const goNext = () => goTo((carouselIndex + 1) % carouselItems.length);
 
   return (
     <div className="min-h-screen bg-white flex flex-col text-black">
@@ -162,18 +164,23 @@ export default function HomeClient({
                   ))}
                 </div>
               </div>
-              {/* Dots indicator */}
+              {/* Controls */}
               {carouselItems.length > 1 && (
-                <div className="flex justify-center gap-2 mt-4">
-                  {carouselItems.map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className={`w-2.5 h-2.5 rounded-full transition-all ${idx === carouselIndex ? "bg-black scale-110" : "bg-black/20"}`}
-                      onClick={() => goTo(idx)}
-                      aria-label={`Slide ${idx + 1}`}
-                    />
-                  ))}
+                <div className="flex justify-center items-center gap-4 mt-4">
+                  <button onClick={goPrev} aria-label="Previous"
+                    className="w-8 h-8 rounded-full border border-black/15 flex items-center justify-center hover:bg-black hover:text-white transition-all text-sm font-bold">
+                    &lt;
+                  </button>
+                  <div className="flex gap-2">
+                    {carouselItems.map((_, idx) => (
+                      <button key={idx} type="button" onClick={() => goTo(idx)} aria-label={`Slide ${idx + 1}`}
+                        className={`w-2 h-2 rounded-full transition-all ${idx === carouselIndex ? "bg-black scale-125" : "bg-black/20"}`} />
+                    ))}
+                  </div>
+                  <button onClick={goNext} aria-label="Next"
+                    className="w-8 h-8 rounded-full border border-black/15 flex items-center justify-center hover:bg-black hover:text-white transition-all text-sm font-bold">
+                    &gt;
+                  </button>
                 </div>
               )}
             </div>
@@ -209,18 +216,23 @@ export default function HomeClient({
                   ))}
                 </div>
               </div>
-              {/* Dots indicator */}
+              {/* Controls */}
               {carouselItems.length > 1 && (
-                <div className="flex justify-center gap-2 mt-4">
-                  {carouselItems.map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className={`w-2.5 h-2.5 rounded-full transition-all ${idx === carouselIndex ? "bg-black scale-110" : "bg-black/20"}`}
-                      onClick={() => goTo(idx)}
-                      aria-label={`Slide ${idx + 1}`}
-                    />
-                  ))}
+                <div className="flex justify-center items-center gap-4 mt-4">
+                  <button onClick={goPrev} aria-label="Previous"
+                    className="w-8 h-8 rounded-full border border-black/15 flex items-center justify-center hover:bg-black hover:text-white transition-all text-sm font-bold">
+                    &lt;
+                  </button>
+                  <div className="flex gap-2">
+                    {carouselItems.map((_, idx) => (
+                      <button key={idx} type="button" onClick={() => goTo(idx)} aria-label={`Slide ${idx + 1}`}
+                        className={`w-2 h-2 rounded-full transition-all ${idx === carouselIndex ? "bg-black scale-125" : "bg-black/20"}`} />
+                    ))}
+                  </div>
+                  <button onClick={goNext} aria-label="Next"
+                    className="w-8 h-8 rounded-full border border-black/15 flex items-center justify-center hover:bg-black hover:text-white transition-all text-sm font-bold">
+                    &gt;
+                  </button>
                 </div>
               )}
             </div>
@@ -267,8 +279,12 @@ export default function HomeClient({
                     )}
                   </div>
                   <div className="md:w-24 shrink-0 flex md:justify-end">
-                    <span className="text-[10px] font-black px-2 py-1 bg-black/5 rounded uppercase tracking-widest text-gray-500">
-                      {event.source === 'google' ? 'Race' : 'Event'}
+                    <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-widest ${
+                      event.source === 'google'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'bg-black/5 text-gray-500'
+                    }`}>
+                      {event.source === 'google' ? 'F1 Race' : 'Event'}
                     </span>
                   </div>
                 </button>

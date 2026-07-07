@@ -50,7 +50,7 @@ export default function NewsPageClient({
                     : "text-gray-400 border-transparent hover:text-gray-600"
                 }`}
               >
-                {language === "ja" ? "最新ニュース" : "Latest News"}
+                <span>{language === "ja" ? "最新ニュース" : "Latest News"}</span>{recentNews.length > 0 && <span className="ml-2 text-[10px] bg-black text-white rounded-full px-2 py-0.5">{recentNews.length}</span>}
               </button>
               <button
                 onClick={() => setActiveTab("backnumbers")}
@@ -60,7 +60,7 @@ export default function NewsPageClient({
                     : "text-gray-400 border-transparent hover:text-gray-600"
                 }`}
               >
-                {language === "ja" ? "バックナンバー" : "Backnumbers"}
+                <span>{language === "ja" ? "バックナンバー" : "Backnumbers"}</span>{rootAlbums.length > 0 && <span className="ml-2 text-[10px] bg-black/10 text-gray-500 rounded-full px-2 py-0.5">{rootAlbums.length}</span>}
               </button>
             </div>
           </div>
@@ -114,7 +114,7 @@ export default function NewsPageClient({
           {activeTab === "backnumbers" && (
             <section>
               <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-400 mb-12 flex items-center gap-4">
-                {language === "ja" ? "バックナンバー" : "Backnumbers"} <div className="h-px flex-1 bg-black/5" />
+                <span>{language === "ja" ? "バックナンバー" : "Backnumbers"}</span>{rootAlbums.length > 0 && <span className="ml-2 text-[10px] bg-black/10 text-gray-500 rounded-full px-2 py-0.5">{rootAlbums.length}</span>} <div className="h-px flex-1 bg-black/5" />
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
                 {rootAlbums.map((album) => (
