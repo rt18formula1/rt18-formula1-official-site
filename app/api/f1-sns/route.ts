@@ -82,7 +82,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!VALID_TYPES.includes(templateType)) {
+    // Normalize sprint_qualifying -> sprint-qualifying (client may send either)
+    const normalizedType = (templateType as string).replace(/_/g, "-") as SnsTemplateType;
+    if (!VALID_TYPES.includes(normalizedType)) {
       return NextResponse.json({ error: "Invalid templateType" }, { status: 400 });
     }
 
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
     }
 
     if (!force) {
-      const cached = await getSnsCacheEntry(year, round, templateType);
+      const cached = await getSnsCacheEntry(year, round, normalizedType);
       // Skip LLM-fallback cached data: re-fetch to get accurate official data
       const isReliable = cached && cached.provider !== "openrouter";
       if (isReliable) {
@@ -104,7 +106,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const result = await generateSnsTemplate(year, round, templateType, raceName);
+    const result = await generateSnsTemplate(year, round, normalizedType, raceName);
     if (!result) {
       return NextResponse.json(
         { error: "Data not available yet", templateType },

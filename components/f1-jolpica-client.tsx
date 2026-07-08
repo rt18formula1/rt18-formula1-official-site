@@ -215,7 +215,7 @@ export default function F1JolpicaClient() {
         body: JSON.stringify({
           year: 2026,
           round: race.round,
-          templateType: trigger.id,
+          templateType: (trigger.id as string).replace('_', '-') as any,
           raceName: race.officialName,
         }),
       });
