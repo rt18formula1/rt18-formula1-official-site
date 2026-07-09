@@ -20,4 +20,6 @@ export const snsLinks = [
   { name: "Threads", url: "https://www.threads.com/@rt18_formula1", icon: "/threads-icon.png" },
   { name: "LinkedIn", url: "https://www.linkedin.com/in/rt18-formula1/", icon: "/linkedin-icon.png" },
   { name: "LINE", url: "https://line.me/R/ti/p/@551zgwzr", icon: "/line-icon.png" },
+  { name: "Tumblr", url: "https://www.tumblr.com/rt18-formula1", icon: "/tumblr.png" },
+  { name: "Bluesky", url: "https://bsky.app/profile/rt18-formula1.bsky.social", icon: "/bluesky.png" },
 ];

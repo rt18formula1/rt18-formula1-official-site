@@ -400,6 +400,7 @@ export default function F1JolpicaClient() {
         {/* Schedule / Races / Drivers / Teams - /api/f1-scrape から取得 */}
         {(['schedule','races','drivers','teams'] as const).includes(activeTab as any) && (
           <F1ScrapeTab
+            language={language}
             tab={activeTab as 'schedule'|'races'|'drivers'|'teams'}
             year={selectedYear}
             data={scrapeData}

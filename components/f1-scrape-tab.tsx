@@ -7,6 +7,7 @@ import { getCalendarForYear, getCalendarLinksForYear } from "@/lib/f1-calendar-d
 type ScrapeTab = "schedule" | "races" | "drivers" | "teams";
 
 interface Props {
+  language?: string;
   tab: ScrapeTab;
   year: number;
   data: any;
@@ -14,7 +15,7 @@ interface Props {
   onLoad: (tab: string, year: number) => void;
 }
 
-export default function F1ScrapeTab({ tab, year, data, loading, onLoad }: Props) {
+export default function F1ScrapeTab({ tab, year, data, loading, onLoad, language = "ja" }: Props) {
   useEffect(() => {
     onLoad(tab, year);
   }, [tab, year]);
@@ -34,13 +35,16 @@ export default function F1ScrapeTab({ tab, year, data, loading, onLoad }: Props)
 
     return (
       <div>
-        <h2 className="text-xl font-bold mb-4">{year} Season Schedule</h2>
+        <h2 className="text-xl font-bold mb-2">{year} Season Schedule</h2>
+        <a href="/calendar" className="inline-flex items-center gap-1 text-xs font-bold text-blue-500 hover:underline mb-4 block">
+          {language === "ja" ? "→ カレンダーページで見る" : "→ View in Calendar page"}
+        </a>
 
         {/* Calendar registration panel for seasons with iCal/gcal URL */}
         {calLinks && (
           <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
             <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-700">カレンダーに登録</p>
+              <p className="text-sm font-semibold text-gray-700">{language === "ja" ? "カレンダーに登録" : "Add to Calendar"}</p>
               {calLinks.note && <p className="text-xs text-gray-500 mt-0.5">{calLinks.note}</p>}
             </div>
             <div className="flex gap-2 flex-wrap">

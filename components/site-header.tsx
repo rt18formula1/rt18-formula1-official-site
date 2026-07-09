@@ -21,13 +21,9 @@ export function SiteHeader() {
     { href: "/portfolio",  label: t("navPortfolio") },
     { href: "/calendar",   label: t("navCalendar") },
     { href: "/f1-database",label: "F1 DB" },
-    { href: "/shop",       label: "Shop" },
+    { href: "/shop",       label: language === "ja" ? "ショップ" : "Shop" },
   ];
-  const subLinks = [
-    { href: "/#profile",  label: t("navProfile") },
-    { href: "/#request",  label: t("navRequest") },
-    { href: "/#contact",  label: t("navContact") },
-  ];
+
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-black/10">
@@ -44,13 +40,7 @@ export function SiteHeader() {
               {link.label}
             </Link>
           ))}
-          <span className="text-black/10 select-none">|</span>
-          {subLinks.map((link) => (
-            <Link key={link.href} href={link.href}
-              className="text-gray-400 hover:text-black transition-colors text-xs font-bold uppercase tracking-wide whitespace-nowrap">
-              {link.label}
-            </Link>
-          ))}
+
         </nav>
 
         <div className="flex items-center gap-4 text-sm text-black">
@@ -90,12 +80,7 @@ export function SiteHeader() {
                 <span className="text-gray-300 text-sm">&#8594;</span>
               </Link>
             ))}
-            {subLinks.map((link) => (
-              <Link key={link.href} href={link.href} onClick={closeMenu}
-                className="py-3 text-sm font-bold text-gray-500 border-b border-black/5 hover:text-black transition-colors">
-                {link.label}
-              </Link>
-            ))}
+
             <Link href="/admin" onClick={closeMenu}
               className="py-3 text-sm font-bold text-gray-400 hover:text-black transition-colors mt-2">
               Admin

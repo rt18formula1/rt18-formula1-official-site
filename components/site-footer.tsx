@@ -41,7 +41,7 @@ export function SiteFooter() {
                 <li><Link href="/portfolio" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">Portfolio</Link></li>
                 <li><Link href="/calendar" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">Calendar</Link></li>
                 <li><Link href="/f1-database" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">F1 DB</Link></li>
-                <li><Link href="/f1-database" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">F1 DB</Link></li>
+                <li><Link href="/f1-database?tab=sns-post" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">SNS Post</Link></li>
               </ul>
             </div>
             <div>
