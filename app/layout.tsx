@@ -66,6 +66,7 @@ export const viewport: Viewport = {
 };
 
 import { CartProvider } from "@/components/shop/cart-context";
+import { CookieBanner } from "@/components/cookie-banner";
 
 export default function RootLayout({
   children,
@@ -88,7 +89,10 @@ export default function RootLayout({
           `}
         </Script>
         <LanguageProvider>
-          <CartProvider>{children}</CartProvider>
+          <CartProvider>
+            {children}
+            <CookieBanner />
+          </CartProvider>
         </LanguageProvider>
         <Analytics />
         <SpeedInsights />
