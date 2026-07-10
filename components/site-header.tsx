@@ -23,6 +23,11 @@ export function SiteHeader() {
     { href: "/f1-database",label: "F1 DB" },
     { href: "/shop",       label: language === "ja" ? "ショップ" : "Shop" },
   ];
+  const subLinks = [
+    { href: "/#profile",  label: t("navProfile") },
+    { href: "/#request",  label: t("navRequest") },
+    { href: "/#contact",  label: t("navContact") },
+  ];
 
 
   return (
@@ -51,6 +56,14 @@ export function SiteHeader() {
           >
             {language === "ja" ? "EN" : "JA"}
           </button>
+          <span className="text-black/10 select-none">|</span>
+          {subLinks.map((link) => (
+            <Link key={link.href} href={link.href}
+              className="font-medium hover:text-blue-600 transition-colors whitespace-nowrap">
+              {link.label}
+            </Link>
+          ))}
+          <span className="text-black/10 select-none">|</span>
           <Link href="/admin" className="hover:underline hidden lg:inline">
             {t("admin")}
           </Link>
@@ -81,7 +94,15 @@ export function SiteHeader() {
               </Link>
             ))}
 
-            <Link href="/admin" onClick={closeMenu}
+            <span className="text-black/10 select-none">|</span>
+          {subLinks.map((link) => (
+            <Link key={link.href} href={link.href}
+              className="font-medium hover:text-blue-600 transition-colors whitespace-nowrap">
+              {link.label}
+            </Link>
+          ))}
+          <span className="text-black/10 select-none">|</span>
+          <Link href="/admin" onClick={closeMenu}
               className="py-3 text-sm font-bold text-gray-400 hover:text-black transition-colors mt-2">
               Admin
             </Link>

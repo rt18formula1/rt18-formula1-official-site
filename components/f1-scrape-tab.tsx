@@ -55,7 +55,7 @@ export default function F1ScrapeTab({ tab, year, data, loading, onLoad, language
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  📅 Google カレンダー
+                  📅 {language === "ja" ? "Google カレンダー" : "Google Calendar"}
                 </a>
               )}
               {calLinks.ical && (
@@ -63,7 +63,7 @@ export default function F1ScrapeTab({ tab, year, data, loading, onLoad, language
                   href={calLinks.ical}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-white text-xs font-semibold rounded-lg hover:bg-gray-900 transition-colors"
                 >
-                  📆 iCal / Apple カレンダー
+                  📆 {language === "ja" ? "iCal / Apple カレンダー" : "iCal / Apple Calendar"}
                 </a>
               )}
             </div>
