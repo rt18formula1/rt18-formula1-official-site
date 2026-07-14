@@ -1,4 +1,5 @@
 import { createClient } from "./supabaseServer";
+import { cookies } from "next/headers";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
@@ -26,20 +27,14 @@ export async function verifyAdminFromRequest(req: Request) {
     throw new Error("ADMIN_EMAIL is not configured");
   }
 
-  // Extract authorization header
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    throw new Error("Unauthorized: Missing authorization header");
-  }
-
-  const token = authHeader.substring(7);
+  // For API routes, use cookies from the request
+  const cookieStore = await cookies();
   
-  // Create a client with the token
   const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  const { data: { user }, error } = await supabase.auth.getUser();
 
   if (error || !user) {
-    throw new Error("Unauthorized: Invalid token");
+    throw new Error("Unauthorized: No user session");
   }
 
   if (user.email !== ADMIN_EMAIL) {

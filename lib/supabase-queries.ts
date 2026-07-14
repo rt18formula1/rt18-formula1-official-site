@@ -64,17 +64,10 @@ async function uploadViaPresignedUrl(
     throw new Error("Supabase client not initialized");
   }
 
-  // Get Supabase session
-  const { data: { session } } = await supabase.auth.getSession();
-  const headers: Record<string, string> = { "content-type": "application/json" };
-  
-  if (session?.access_token) {
-    headers["authorization"] = `Bearer ${session.access_token}`;
-  }
-
   const signRes = await fetch("/api/admin/upload", {
     method: "POST",
-    headers,
+    headers: { "content-type": "application/json" },
+    credentials: "include",
     body: JSON.stringify({
       bucket,
       fileName: file.name,
