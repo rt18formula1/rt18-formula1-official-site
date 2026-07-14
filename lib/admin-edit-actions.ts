@@ -1,16 +1,8 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { supabaseAdmin } from "./supabaseAdmin";
 import type { DbNews, DbPortfolio } from "./supabase-queries";
-
-async function verifyAdmin() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("rt18_admin")?.value;
-  if (sessionCookie !== "1") {
-    throw new Error("Unauthorized");
-  }
-}
+import { verifyAdmin } from "./admin-auth";
 
 
 export async function updateNewsTitle(id: string, title_en: string, title_ja: string) {

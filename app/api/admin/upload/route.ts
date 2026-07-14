@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildR2ObjectKey, getPresignedUrl } from "@/lib/r2";
-
-const COOKIE = "rt18_admin";
+import { verifyAdminFromRequest } from "@/lib/admin-auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const sessionCookie = req.cookies.get(COOKIE)?.value;
-    if (sessionCookie !== "1") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    await verifyAdminFromRequest(req);
 
     const body = (await req.json().catch(() => null)) as {
       bucket?: string;

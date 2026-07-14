@@ -60,9 +60,21 @@ async function uploadViaPresignedUrl(
   bucket: string,
   file: File
 ): Promise<string> {
+  if (!supabase) {
+    throw new Error("Supabase client not initialized");
+  }
+
+  // Get Supabase session
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  
+  if (session?.access_token) {
+    headers["authorization"] = `Bearer ${session.access_token}`;
+  }
+
   const signRes = await fetch("/api/admin/upload", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify({
       bucket,
       fileName: file.name,
@@ -98,48 +110,12 @@ async function uploadViaPresignedUrl(
   return signed.url;
 }
 
-async function uploadViaDirect(
-  bucket: string,
-  file: File
-): Promise<string> {
-  const form = new FormData();
-  form.append("file", file);
-  form.append("bucket", bucket);
-
-  const res = await fetch("/api/admin/upload-direct", {
-    method: "POST",
-    body: form,
-  });
-
-  if (!res.ok) {
-    let errMsg = "Upload failed";
-    try {
-      const err = await res.json();
-      errMsg = err.error || errMsg;
-    } catch { /* ignore json parse error */ }
-    throw new Error(`direct: ${errMsg} (HTTP ${res.status})`);
-  }
-
-  const data = (await res.json()) as { url?: string };
-  if (!data.url) {
-    throw new Error("direct: URLの取得に失敗しました");
-  }
-  return data.url;
-}
-
 export async function uploadImageToStorage(
   bucket: "news-images" | "portfolio-images" | "album-covers" | "bucknumber-covers",
   file: File
 ): Promise<string> {
-  // Try presigned URL first (supports large files, no server payload limit)
-  try {
-    return await uploadViaPresignedUrl(bucket, file);
-  } catch (presignedErr) {
-    console.warn("Presigned URL upload failed, falling back to direct upload:", presignedErr);
-  }
-
-  // Fallback: upload through server (limited to ~4.5MB by Vercel)
-  return await uploadViaDirect(bucket, file);
+  // Use presigned URL only (supports large files, no server payload limit)
+  return await uploadViaPresignedUrl(bucket, file);
 }
 
 // ----------------------------------------------------------------------
