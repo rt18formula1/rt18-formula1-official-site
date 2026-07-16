@@ -391,7 +391,7 @@ export default function HomeClient({
                     className="flex items-center justify-center w-14 h-14 md:w-20 md:h-20 bg-white border border-black/10 rounded-2xl hover:bg-black/5 hover:scale-110 transition-all shadow-sm"
                     title={link.name}
                   >
-                    <img {...generateImageProps(link.icon, link.name, "sns")} className="w-8 h-8 md:w-12 md:h-12 object-contain" />
+                    <img {...generateImageProps(link.icon, link.name, "sns")} className={(link as any).size === "lg" ? "w-10 h-10 md:w-14 md:h-14 object-contain" : "w-8 h-8 md:w-12 md:h-12 object-contain"} />
                   </a>
                 ))}
               </div>

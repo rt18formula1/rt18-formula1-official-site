@@ -9,6 +9,8 @@ export const linktreeLinks = [
   { title: "GitHub", url: "https://github.com/rt18formula1" },
   { title: "Official Shop", url: "https://suzuri.jp/rt18_formula1" },
   { title: "Wish List", url: "https://gi-pt.com/main/wishlist/fan-view/3a1880d2-89de-491e-f214-0572e430becd" },
+  { title: "Tumblr", url: "https://www.tumblr.com/rt18-formula1" },
+  { title: "Bluesky", url: "https://bsky.app/profile/rt18-formula1.bsky.social" },
 ];
 
 export const snsLinks = [
@@ -20,6 +22,6 @@ export const snsLinks = [
   { name: "Threads", url: "https://www.threads.com/@rt18_formula1", icon: "/threads-icon.png" },
   { name: "LinkedIn", url: "https://www.linkedin.com/in/rt18-formula1/", icon: "/linkedin-icon.png" },
   { name: "LINE", url: "https://line.me/R/ti/p/@551zgwzr", icon: "/line-icon.png" },
-  { name: "Tumblr", url: "https://www.tumblr.com/rt18-formula1", icon: "/tumblr.png" },
-  { name: "Bluesky", url: "https://bsky.app/profile/rt18-formula1.bsky.social", icon: "/bluesky.png" },
+  { name: "Tumblr", url: "https://www.tumblr.com/rt18-formula1", icon: "/tumblr.png", size: "lg" },
+  { name: "Bluesky", url: "https://bsky.app/profile/rt18-formula1.bsky.social", icon: "/bluesky.png", size: "lg" },
 ];
