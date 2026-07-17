@@ -61,6 +61,7 @@ export function SiteFooter() {
                 <li><Link href="/shop/inquiry" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">Contact</Link></li>
                 <li><Link href="/#request" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">Request</Link></li>
                 <li><a href="https://forms.gle/sCnwiNJ5gkLLt9Bn8" target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">Feedback</a></li>
+                <li><Link href="/cookie-privacy-policy" className="text-sm font-bold text-gray-300 hover:text-white transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
           </div>
@@ -82,6 +83,8 @@ export function SiteFooter() {
               &copy; {new Date().getFullYear()} rt18_formula1. All rights reserved.
             </p>
             <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-widest text-gray-500">
+              <Link href="/cookie-privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
+              <span className="opacity-20">|</span>
               <Link href="/admin" className="hover:text-white transition-colors">Admin Access</Link>
               <span className="opacity-20">|</span>
               <span>Based in Japan</span>
