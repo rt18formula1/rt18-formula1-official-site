@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/components/providers/language-provider";
 
 export function InquiryClient() {
-  const [lang, setLang] = useState<"ja" | "en">("ja");
+  const { language: lang } = useLanguage();
   
   const [formData, setFormData] = useState({
     name: "",
@@ -16,11 +17,6 @@ export function InquiryClient() {
   
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("language");
-    if (stored === "en") setLang("en");
-  }, []);
 
   const t = {
     title: lang === "ja" ? "ショップに関するお問い合わせ" : "Shop Inquiry",
