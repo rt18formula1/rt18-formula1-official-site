@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/components/providers/language-provider";
 import { supabase } from "@/lib/supabaseClient";
 import { useCart } from "./cart-context";
 
@@ -32,14 +33,12 @@ export function ShopClient() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
-  const [lang, setLang] = useState<"ja" | "en">("ja");
+  const { language: lang } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem("language");
-    if (stored === "en") setLang("en");
     if (supabase) {
       supabase.auth.getUser().then(({ data }) => setUser(data.user));
     }

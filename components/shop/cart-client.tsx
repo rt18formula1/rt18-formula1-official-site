@@ -1,19 +1,18 @@
 "use client";
 import { useCart } from "./cart-context";
 import Link from "next/link";
+import { useLanguage } from "@/components/providers/language-provider";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 export function CartClient() {
   const { items, removeItem, updateQuantity, totalPrice, totalCount } = useCart();
-  const [lang, setLang] = useState<"ja" | "en">("ja");
+  const { language: lang } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem("language");
-    if (stored === "en") setLang("en");
     const checkUser = async () => {
       if (!supabase) return;
       const { data } = await supabase.auth.getUser();

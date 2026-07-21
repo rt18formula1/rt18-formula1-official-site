@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/components/providers/language-provider";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -52,7 +53,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/shop";
-  const [lang, setLang] = useState<"ja" | "en">("ja");
+  const { language: lang } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,11 +62,6 @@ function LoginForm() {
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("language");
-    if (stored === "en") setLang("en");
-  }, []);
 
   const c = t[lang];
 

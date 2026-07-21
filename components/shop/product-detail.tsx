@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useCart } from "./cart-context";
 import Link from "next/link";
+import { useLanguage } from "@/components/providers/language-provider";
 
 type Product = {
   id: string;
@@ -25,13 +26,9 @@ const TYPE_LABELS: Record<string, string> = {
 export function ProductDetail({ product }: { product: Product }) {
   const { addItem, items } = useCart();
   const [added, setAdded] = useState(false);
-  const [lang, setLang] = useState<"ja" | "en">("ja");
+  const { language: lang } = useLanguage();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("language");
-      if (stored === "en") setLang("en");
-    }
   }, []);
 
   const inCart = items.some(i => i.id === product.id);

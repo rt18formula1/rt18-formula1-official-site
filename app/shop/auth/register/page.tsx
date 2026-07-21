@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/components/providers/language-provider";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
@@ -111,7 +112,7 @@ const t = {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [lang, setLang] = useState<"ja" | "en">("ja");
+  const { language: lang } = useLanguage();
   const [step, setStep] = useState<Step>("account");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -129,11 +130,6 @@ export default function RegisterPage() {
   const [postalLoading, setPostalLoading] = useState(false);
   const [country, setCountry] = useState("Japan");
   const [agreed, setAgreed] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("language");
-    if (stored === "en") setLang("en");
-  }, []);
 
   const c = t[lang];
 

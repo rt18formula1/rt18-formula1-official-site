@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/components/providers/language-provider";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
@@ -155,7 +156,7 @@ const countries = ["Japan","United States","United Kingdom","Australia","Canada"
 
 export default function MyPage() {
   const router = useRouter();
-  const [lang, setLang] = useState<"ja" | "en">("ja");
+  const { language: lang } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
@@ -177,8 +178,6 @@ export default function MyPage() {
   const [postalLoading, setPostalLoading] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("language");
-    if (stored === "en") setLang("en");
     const load = async () => {
       if (!supabase) { router.push("/shop/auth/login"); return; }
       const { data: { user } } = await supabase.auth.getUser();
