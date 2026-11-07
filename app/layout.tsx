@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   ),
   other: {
     'google-site-verification': 'G-7V8FYG7SDB',
+    'horie-verify': 'hcp-23e11f966809d84358b8c6cef7e2543a',
   },
   title: "rt18_formula1",
   description:
